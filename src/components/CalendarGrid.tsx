@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { mockArtPrizes, Category } from '@/data/mockArtPrizes';
+import { useArtPrizes, type ArtPrize } from '@/hooks/useArtPrizes';
 import { CalendarCard } from './CalendarCard';
 import { PrizeDetailModal } from './PrizeDetailModal';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
-import type { ArtPrize } from '@/data/mockArtPrizes';
+import type { Category } from '@/data/mockArtPrizes';
 
 const categories: (Category | 'all')[] = [
   'all',
@@ -18,6 +17,8 @@ const categories: (Category | 'all')[] = [
   'mixed',
   'residency',
   'grant',
+  'exhibition',
+  'public_art',
 ];
 
 export function CalendarGrid() {
@@ -26,7 +27,9 @@ export function CalendarGrid() {
   const [selectedPrize, setSelectedPrize] = useState<ArtPrize | null>(null);
   const [isProUser] = useState(false); // This would come from auth context
 
-  const filteredPrizes = mockArtPrizes.filter((prize) => {
+  const { data: prizes, isLoading } = useArtPrizes(false);
+
+  const filteredPrizes = (prizes || []).filter((prize) => {
     if (selectedCategory === 'all') return true;
     return prize.category === selectedCategory;
   });
@@ -76,29 +79,38 @@ export function CalendarGrid() {
           </div>
         </div>
 
+        {/* Loading state */}
+        {isLoading && (
+          <div className="text-center py-16">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+          </div>
+        )}
+
         {/* Cards grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {sortedPrizes.map((prize, index) => (
-            <div
-              key={prize.id}
-              className="animate-fade-in-up opacity-0"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <CalendarCard
-                prize={prize}
-                isLocked={!isProUser && !prize.isShortTerm}
-                onClick={() => {
-                  if (isProUser || prize.isShortTerm) {
-                    setSelectedPrize(prize);
-                  }
-                }}
-              />
-            </div>
-          ))}
-        </div>
+        {!isLoading && (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sortedPrizes.map((prize, index) => (
+              <div
+                key={prize.id}
+                className="animate-fade-in-up opacity-0"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <CalendarCard
+                  prize={prize}
+                  isLocked={!isProUser && !prize.isShortTerm}
+                  onClick={() => {
+                    if (isProUser || prize.isShortTerm) {
+                      setSelectedPrize(prize);
+                    }
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Empty state */}
-        {sortedPrizes.length === 0 && (
+        {!isLoading && sortedPrizes.length === 0 && (
           <div className="text-center py-16">
             <p className="text-muted-foreground">
               Keine Ausschreibungen in dieser Kategorie gefunden.

@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      art_prizes: {
+        Row: {
+          age_max: number | null
+          age_min: number | null
+          category: Database["public"]["Enums"]["art_category"]
+          country: string
+          created_at: string
+          deadline: string
+          description: string
+          fee: number | null
+          id: string
+          is_archived: boolean
+          is_short_term: boolean
+          name: string
+          organizer: string
+          prize_amount: number | null
+          region: string
+          requirements: string[] | null
+          updated_at: string
+          website: string
+        }
+        Insert: {
+          age_max?: number | null
+          age_min?: number | null
+          category: Database["public"]["Enums"]["art_category"]
+          country: string
+          created_at?: string
+          deadline: string
+          description: string
+          fee?: number | null
+          id?: string
+          is_archived?: boolean
+          is_short_term?: boolean
+          name: string
+          organizer: string
+          prize_amount?: number | null
+          region: string
+          requirements?: string[] | null
+          updated_at?: string
+          website: string
+        }
+        Update: {
+          age_max?: number | null
+          age_min?: number | null
+          category?: Database["public"]["Enums"]["art_category"]
+          country?: string
+          created_at?: string
+          deadline?: string
+          description?: string
+          fee?: number | null
+          id?: string
+          is_archived?: boolean
+          is_short_term?: boolean
+          name?: string
+          organizer?: string
+          prize_amount?: number | null
+          region?: string
+          requirements?: string[] | null
+          updated_at?: string
+          website?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +85,17 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      art_category:
+        | "painting"
+        | "sculpture"
+        | "media"
+        | "photography"
+        | "performance"
+        | "mixed"
+        | "residency"
+        | "grant"
+        | "exhibition"
+        | "public_art"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +222,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      art_category: [
+        "painting",
+        "sculpture",
+        "media",
+        "photography",
+        "performance",
+        "mixed",
+        "residency",
+        "grant",
+        "exhibition",
+        "public_art",
+      ],
+    },
   },
 } as const

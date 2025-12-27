@@ -63,6 +63,8 @@ export const translations: Translations = {
   'category.mixed': { de: 'Mixed Media', en: 'Mixed Media', fr: 'Techniques Mixtes', es: 'Técnica Mixta', ko: '복합 매체' },
   'category.residency': { de: 'Residenz', en: 'Residency', fr: 'Résidence', es: 'Residencia', ko: '레지던시' },
   'category.grant': { de: 'Stipendium', en: 'Grant', fr: 'Bourse', es: 'Beca', ko: '장학금' },
+  'category.exhibition': { de: 'Ausstellung', en: 'Exhibition', fr: 'Exposition', es: 'Exposición', ko: '전시' },
+  'category.public_art': { de: 'Kunst am Bau', en: 'Public Art', fr: 'Art Public', es: 'Arte Público', ko: '공공 예술' },
 
   // Pricing
   'pricing.title': { de: 'Einfache Preise', en: 'Simple Pricing', fr: 'Tarifs Simples', es: 'Precios Simples', ko: '간단한 요금' },

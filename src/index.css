@@ -45,6 +45,8 @@
     --category-mixed: 45 80% 50%;
     --category-residency: 120 45% 45%;
     --category-grant: 210 65% 50%;
+    --category-exhibition: 25 90% 50%;
+    --category-public-art: 180 60% 45%;
 
     /* Gradients */
     --gradient-hero: linear-gradient(135deg, hsl(220 45% 20%) 0%, hsl(220 35% 35%) 100%);
@@ -169,6 +171,8 @@
   .category-mixed { background-color: hsl(var(--category-mixed)); }
   .category-residency { background-color: hsl(var(--category-residency)); }
   .category-grant { background-color: hsl(var(--category-grant)); }
+  .category-exhibition { background-color: hsl(var(--category-exhibition)); }
+  .category-public-art { background-color: hsl(var(--category-public-art)); }
 
   /* Calendar card tear effect */
   .calendar-tear {
