@@ -1,5 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArtPrize, getCategoryColor, formatDeadline, getDaysUntilDeadline, isDeadlineSoon } from '@/data/mockArtPrizes';
+import { getCategoryColor, formatDeadline, getDaysUntilDeadline, isDeadlineSoon } from '@/data/mockArtPrizes';
+import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Lock, ThumbsDown, MapPin, Euro, Users, ExternalLink, Calendar } from 'lucide-react';
@@ -21,9 +22,10 @@ export function CalendarCard({ prize, isLocked = false, onClick }: CalendarCardP
       className={`
         relative group cursor-pointer
         bg-card rounded-xl overflow-hidden
-        shadow-card hover:shadow-card-hover
+        shadow-[0_8px_30px_rgba(0,0,0,0.12),0_4px_10px_rgba(0,0,0,0.06)]
+        hover:shadow-[0_20px_50px_rgba(0,0,0,0.2),0_10px_20px_rgba(0,0,0,0.1)]
         transition-all duration-300 ease-out
-        hover:-translate-y-1
+        hover:-translate-y-2
         ${isLocked ? 'opacity-75' : ''}
       `}
       onClick={onClick}

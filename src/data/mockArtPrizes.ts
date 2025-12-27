@@ -6,7 +6,9 @@ export type Category =
   | 'performance' 
   | 'mixed' 
   | 'residency' 
-  | 'grant';
+  | 'grant'
+  | 'exhibition'
+  | 'public_art';
 
 export interface ArtPrize {
   id: string;
@@ -209,6 +211,8 @@ export function getCategoryColor(category: Category): string {
     mixed: 'category-mixed',
     residency: 'category-residency',
     grant: 'category-grant',
+    exhibition: 'category-exhibition',
+    public_art: 'category-public-art',
   };
   return colors[category];
 }
