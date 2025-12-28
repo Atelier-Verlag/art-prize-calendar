@@ -1,11 +1,31 @@
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Check, Sparkles } from 'lucide-react';
+
+// Stripe Price IDs
+const PRICE_IDS = {
+  monthly: 'price_1RgtdgBthqKdl9mFCbDqMc7v',
+  yearly: 'price_1RgtdgBthqKdl9mFCbDqMc7v', // Use the same for now, update when yearly price is created
+};
 
 export function PricingSection() {
   const { t } = useLanguage();
+  const { user, isProUser, startCheckout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubscribe = async (priceId: string | null) => {
+    if (!priceId) return;
+    
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    
+    await startCheckout(priceId);
+  };
 
   const plans = [
     {
@@ -19,6 +39,7 @@ export function PricingSection() {
       cta: t('hero.cta'),
       variant: 'outline' as const,
       popular: false,
+      priceId: null,
     },
     {
       name: t('pricing.monthly'),
@@ -30,9 +51,10 @@ export function PricingSection() {
         t('pricing.feature.ai'),
         t('pricing.feature.archive'),
       ],
-      cta: t('pricing.subscribe'),
+      cta: isProUser ? 'Aktiv' : t('pricing.subscribe'),
       variant: 'default' as const,
       popular: false,
+      priceId: PRICE_IDS.monthly,
     },
     {
       name: t('pricing.yearly'),
@@ -45,9 +67,10 @@ export function PricingSection() {
         t('pricing.feature.archive'),
         t('pricing.yearly.save'),
       ],
-      cta: t('pricing.subscribe'),
+      cta: isProUser ? 'Aktiv' : t('pricing.subscribe'),
       variant: 'default' as const,
       popular: true,
+      priceId: PRICE_IDS.yearly,
     },
   ];
 
@@ -115,6 +138,8 @@ export function PricingSection() {
                     }
                   `}
                   variant={plan.popular ? 'default' : plan.variant}
+                  onClick={() => handleSubscribe(plan.priceId)}
+                  disabled={isProUser && plan.priceId !== null}
                 >
                   {plan.cta}
                 </Button>
