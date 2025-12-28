@@ -31,7 +31,7 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
       navigate('/auth');
     } else {
       // Default to monthly price
-      startCheckout('price_1RjZ68D70Qs4RhIVb39PiHqZ');
+      startCheckout('price_1RgtdgBthqKdl9mFCbDqMc7v');
     }
   };
 
