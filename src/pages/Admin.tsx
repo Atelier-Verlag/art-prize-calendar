@@ -10,9 +10,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Shield, ArrowLeft } from 'lucide-react';
+import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 type ContentKey = 'impressum' | 'datenschutz' | 'disclaimer';
+
+interface ScraperLog {
+  id: string;
+  created_at: string;
+  status: 'success' | 'error' | 'running';
+  message: string;
+  items_found: number;
+}
 
 export default function Admin() {
   const { user, isAdmin, loading } = useAuth();
@@ -26,6 +36,9 @@ export default function Admin() {
   });
   const [saving, setSaving] = useState(false);
   const [loadingContent, setLoadingContent] = useState(true);
+  const [scraperRunning, setScraperRunning] = useState(false);
+  const [scraperLogs, setScraperLogs] = useState<ScraperLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
 
   // Redirect non-admins
   useEffect(() => {
@@ -67,6 +80,29 @@ export default function Admin() {
     }
   }, [user, isAdmin]);
 
+  // Load scraper logs
+  const loadScraperLogs = async () => {
+    setLoadingLogs(true);
+    const { data, error } = await supabase
+      .from('scraper_logs' as any)
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (error) {
+      console.error('Error loading scraper logs:', error);
+    } else if (data) {
+      setScraperLogs(data as unknown as ScraperLog[]);
+    }
+    setLoadingLogs(false);
+  };
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      loadScraperLogs();
+    }
+  }, [user, isAdmin]);
+
   const handleSave = async (key: ContentKey) => {
     setSaving(true);
     
@@ -90,6 +126,61 @@ export default function Admin() {
     }
     
     setSaving(false);
+  };
+
+  const handleStartScraper = async () => {
+    setScraperRunning(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-prizes');
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'Roboter gestartet',
+        description: data?.message || 'Der Kunstpreis-Roboter wurde erfolgreich gestartet.',
+      });
+      
+      // Logs neu laden
+      await loadScraperLogs();
+    } catch (error) {
+      console.error('Error starting scraper:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Der Roboter konnte nicht gestartet werden.',
+        variant: 'destructive',
+      });
+    } finally {
+      setScraperRunning(false);
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-destructive" />;
+      case 'running':
+        return <Loader2 className="h-4 w-4 text-primary animate-spin" />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'error':
+        return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'running':
+        return 'bg-primary/10 text-primary border-primary/20';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
   };
 
   if (loading || loadingContent) {
@@ -144,6 +235,94 @@ export default function Admin() {
                 </p>
               </div>
             </div>
+
+            {/* Scraper Section */}
+            <Card className="mb-8">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Bot className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle>Kunstpreis-Roboter</CardTitle>
+                      <CardDescription>Automatische Aktualisierung der Kunstpreise</CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={loadScraperLogs}
+                      disabled={loadingLogs}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${loadingLogs ? 'animate-spin' : ''}`} />
+                      Aktualisieren
+                    </Button>
+                    <Button
+                      onClick={handleStartScraper}
+                      disabled={scraperRunning}
+                      className="gradient-gold text-primary font-semibold border-0"
+                    >
+                      {scraperRunning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Läuft...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          🔄 Kunstpreis-Roboter starten
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Letzte Aktivitäten</h4>
+                  {loadingLogs ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : scraperLogs.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Noch keine Aktivitäten. Starten Sie den Roboter, um zu beginnen.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {scraperLogs.map((log) => (
+                        <div
+                          key={log.id}
+                          className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50"
+                        >
+                          {getStatusIcon(log.status)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusBadgeClass(log.status)}`}>
+                                {log.status === 'success' ? 'Erfolgreich' : log.status === 'error' ? 'Fehler' : 'Läuft'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(log.created_at), 'dd.MM.yyyy HH:mm:ss', { locale: de })}
+                              </span>
+                              {log.items_found > 0 && (
+                                <span className="text-xs text-primary font-medium">
+                                  {log.items_found} gefunden
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-foreground mt-1 break-words">
+                              {log.message}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             <Tabs defaultValue="impressum" className="space-y-6">
               <TabsList className="grid w-full grid-cols-3">

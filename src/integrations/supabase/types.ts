@@ -101,6 +101,30 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_logs: {
+        Row: {
+          created_at: string
+          id: string
+          items_found: number | null
+          message: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items_found?: number | null
+          message: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items_found?: number | null
+          message?: string
+          status?: string
+        }
+        Relationships: []
+      }
       site_content: {
         Row: {
           content: string
