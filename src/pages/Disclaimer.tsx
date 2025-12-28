@@ -5,11 +5,9 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 
-export default function Datenschutz() {
-  const { t } = useLanguage();
+export default function Disclaimer() {
   const navigate = useNavigate();
   const [content, setContent] = useState<string | null>(null);
 
@@ -18,7 +16,7 @@ export default function Datenschutz() {
       const { data } = await supabase
         .from('site_content' as any)
         .select('content')
-        .eq('key', 'datenschutz')
+        .eq('key', 'disclaimer')
         .maybeSingle();
       
       if (data && (data as any).content) {
@@ -31,8 +29,8 @@ export default function Datenschutz() {
   return (
     <>
       <Helmet>
-        <title>{t('footer.privacy')} | Kunstpreiskalender</title>
-        <meta name="description" content="Datenschutzerklärung" />
+        <title>Disclaimer | Kunstpreiskalender</title>
+        <meta name="description" content="Haftungsausschluss" />
       </Helmet>
 
       <div className="min-h-screen bg-background">
@@ -50,7 +48,7 @@ export default function Datenschutz() {
             </Button>
 
             <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-8">
-              {t('footer.privacy')}
+              Disclaimer
             </h1>
 
             <div className="prose prose-lg dark:prose-invert">
@@ -60,40 +58,30 @@ export default function Datenschutz() {
                 <>
                   <section className="mb-8">
                     <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-                      1. Datenschutz auf einen Blick
+                      Haftungsausschluss
                     </h2>
-                    <h3 className="font-semibold text-foreground mt-4 mb-2">Allgemeine Hinweise</h3>
                     <p className="text-muted-foreground">
-                      Die folgenden Hinweise geben einen einfachen Überblick darüber, was mit Ihren personenbezogenen Daten passiert, wenn Sie diese Website besuchen.
+                      [Hier können Sie Ihren Haftungsausschluss einfügen]
                     </p>
                   </section>
 
                   <section className="mb-8">
                     <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-                      2. Datenerfassung auf dieser Website
+                      Haftung für Inhalte
                     </h2>
-                    <h3 className="font-semibold text-foreground mt-4 mb-2">Wer ist verantwortlich?</h3>
                     <p className="text-muted-foreground">
-                      Die Datenverarbeitung auf dieser Website erfolgt durch den Websitebetreiber. 
-                      Dessen Kontaktdaten können Sie dem Impressum dieser Website entnehmen.
+                      Die Inhalte unserer Seiten wurden mit größter Sorgfalt erstellt. 
+                      Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen.
                     </p>
                   </section>
 
                   <section className="mb-8">
                     <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-                      3. Ihre Rechte
+                      Haftung für Links
                     </h2>
                     <p className="text-muted-foreground">
-                      Sie haben jederzeit das Recht, unentgeltlich Auskunft über Herkunft, Empfänger und Zweck Ihrer gespeicherten personenbezogenen Daten zu erhalten.
-                    </p>
-                  </section>
-
-                  <section className="mb-8">
-                    <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-                      4. Analyse-Tools und Tools von Drittanbietern
-                    </h2>
-                    <p className="text-muted-foreground">
-                      [Hier können Sie Details zu verwendeten Analyse-Tools einfügen]
+                      Unser Angebot enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir keinen Einfluss haben. 
+                      Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen.
                     </p>
                   </section>
                 </>

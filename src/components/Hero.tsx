@@ -38,8 +38,8 @@ export function Hero() {
           </h1>
 
           {/* Subtitle */}
-          <p className="mt-6 text-lg text-muted-foreground md:text-xl lg:text-2xl max-w-2xl mx-auto animate-fade-in-up delay-100 opacity-0">
-            Kalender für Kunstausschreibungen
+          <p className="mt-6 text-lg text-muted-foreground md:text-xl lg:text-2xl max-w-3xl mx-auto animate-fade-in-up delay-100 opacity-0">
+            Der umfassende Kalender für Kunstausschreibungen für Künstlerinnen und Künstler – sorgfältig kuratiert
           </p>
 
           {/* Stats */}
