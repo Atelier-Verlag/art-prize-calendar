@@ -11,7 +11,7 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[FETCH-PRIZES] ${step}${detailsStr}`);
 };
 
-// Erweiterte internationale Suchbegriffe für Open Calls 2025/2026
+// Erweiterte internationale Suchbegriffe für Open Calls 2026 (nur 2026!)
 const SEARCH_QUERIES = [
   "International Art Open Calls 2026",
   "Kunstpreise & Wettbewerbe 2026 Deutschland",
@@ -19,6 +19,10 @@ const SEARCH_QUERIES = [
   "Open Call Malerei & Bildhauerei 2026",
   "Ausschreibungen Bildende Kunst 2026 Deutschland Österreich",
   "Call for Artists 2026 Europe",
+  // Spezifische Kategorien für Skulptur, Performance und Medienkunst
+  "International Performance Art Open Calls 2026",
+  "Sculpture Competitions 2026 worldwide",
+  "New Media Art Grants 2026",
 ];
 
 interface TavilyResult {
@@ -79,13 +83,20 @@ async function extractPrizesWithAI(
     .map((r, i) => `[${i + 1}] Titel: ${r.title}\nURL: ${r.url}\nInhalt: ${r.content}`)
     .join("\n\n---\n\n");
 
-  const systemPrompt = `Du bist ein Experte für Kunstausschreibungen. Extrahiere aus den Suchergebnissen alle relevanten Kunstwettbewerbe, Kunstpreise, Stipendien und Open Calls für 2025 und 2026.
+  const today = new Date().toISOString().split('T')[0];
+  
+  const systemPrompt = `Du bist ein Experte für Kunstausschreibungen. Extrahiere aus den Suchergebnissen alle relevanten Kunstwettbewerbe, Kunstpreise, Stipendien und Open Calls.
 
-WICHTIG:
-- Nur Ausschreibungen mit Deadline in 2025 oder 2026 extrahieren
-- Fokus auf Bildende Kunst (Malerei, Skulptur, Installation, Fotografie, etc.)
+KRITISCHE DATUMS-REGELN:
+- Das heutige Datum ist: ${today}
+- IGNORIERE STRIKT alle Ergebnisse mit Deadline VOR dem heutigen Datum!
+- IGNORIERE alle Ausschreibungen von 2025, es sei denn die Deadline liegt nachweislich in der Zukunft
+- Nur Ausschreibungen mit Deadline in 2026 oder später extrahieren
+- Im Zweifel: NICHT extrahieren!
+
+FOKUS:
+- Bildende Kunst (Malerei, Skulptur, Installation, Fotografie, Performance, Medienkunst)
 - Keine Musik, Theater oder Literatur-Wettbewerbe
-- Ordne JEDEN Eintrag STRIKT einer der folgenden Kategorien zu!
 
 KATEGORIEN (STRIKT VERWENDEN):
 - "Kunstpreis" = Preise für herausragende Kunstwerke oder Lebenswerk
@@ -94,18 +105,20 @@ KATEGORIEN (STRIKT VERWENDEN):
 - "painting" = Spezifisch für Malerei
 - "photography" = Spezifisch für Fotografie
 - "sculpture" = Spezifisch für Bildhauerei
+- "performance" = Spezifisch für Performance-Kunst
+- "media" = Spezifisch für Medienkunst / New Media Art
 - "residency" = Künstlerresidenzen
 - "mixed" = Mehrere Medien oder nicht eindeutig zuordenbar
 
 Für jeden gefundenen Eintrag extrahiere:
 - name: Titel der Ausschreibung
-- deadline: Datum im Format YYYY-MM-DD (wenn nur Monat bekannt, nutze den 15. des Monats)
+- deadline: Datum im Format YYYY-MM-DD (MUSS in der Zukunft liegen!)
 - website: URL zur Ausschreibung
 - description: Kurze Beschreibung (max 200 Zeichen)
 - organizer: Veranstalter/Organisation
 - region: Region/Stadt (z.B. "Berlin", "Bayern", "Europa")
 - country: Land (z.B. "Deutschland", "Österreich", "International")
-- category: STRIKT eine von: Kunstpreis, Wettbewerb, grant, painting, photography, sculpture, residency, mixed
+- category: STRIKT eine von: Kunstpreis, Wettbewerb, grant, painting, photography, sculpture, performance, media, residency, mixed
 - fee: Teilnahmegebühr in Euro (null wenn kostenlos oder unbekannt)
 - prize_amount: Preisgeld in Euro (null wenn unbekannt)`;
 
@@ -144,7 +157,7 @@ Für jeden gefundenen Eintrag extrahiere:
                       country: { type: "string" },
                       category: { 
                         type: "string", 
-                        enum: ["Kunstpreis", "Wettbewerb", "grant", "painting", "photography", "sculpture", "residency", "mixed"] 
+                        enum: ["Kunstpreis", "Wettbewerb", "grant", "painting", "photography", "sculpture", "performance", "media", "residency", "mixed"] 
                       },
                       fee: { type: "number", nullable: true },
                       prize_amount: { type: "number", nullable: true },
@@ -318,16 +331,34 @@ serve(async (req) => {
         draftCount = extractedPrizes.length;
       }
 
-      // 4. SPEICHERN: Neue Preise in Datenbank einfügen
-      for (const prize of extractedPrizes) {
-        // Prüfen ob bereits vorhanden (nach Website-URL)
-        const { data: existing } = await supabaseClient
+      // Filtere abgelaufene Preise VOR dem Speichern
+      const todayDate = new Date().toISOString().split('T')[0];
+      const validPrizes = extractedPrizes.filter(prize => {
+        if (prize.deadline < todayDate) {
+          logStep(`Gefiltert (abgelaufen): ${prize.name} - Deadline: ${prize.deadline}`);
+          return false;
+        }
+        return true;
+      });
+      
+      logStep(`Nach Datums-Filter: ${validPrizes.length} von ${extractedPrizes.length} Preisen behalten`);
+
+      // 4. SPEICHERN: Neue Preise in Datenbank einfügen (mit Dubletten-Check nach Name UND Website)
+      for (const prize of validPrizes) {
+        // Prüfen ob bereits vorhanden (nach Website-URL ODER Name)
+        const { data: existingByUrl } = await supabaseClient
           .from("art_prizes")
           .select("id")
           .eq("website", prize.website)
           .maybeSingle();
 
-        if (!existing) {
+        const { data: existingByName } = await supabaseClient
+          .from("art_prizes")
+          .select("id")
+          .eq("name", prize.name)
+          .maybeSingle();
+
+        if (!existingByUrl && !existingByName) {
           // Validiere category gegen erlaubte Werte (inkl. neue Kategorien)
           const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art", "Kunstpreis", "Wettbewerb"];
           const safeCategory = validCategories.includes(prize.category) ? prize.category : "mixed";
