@@ -125,6 +125,30 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_sources: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          url?: string
+        }
+        Relationships: []
+      }
       site_content: {
         Row: {
           content: string
