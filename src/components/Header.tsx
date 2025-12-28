@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -11,13 +11,16 @@ export function Header() {
   const { t } = useLanguage();
   const { user, isProUser, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const isOnIndexPage = location.pathname === '/';
+
   const navItems = [
-    { key: 'nav.calendar', icon: Calendar, href: '#calendar' },
-    { key: 'nav.archive', icon: Archive, href: '#archive' },
-    { key: 'nav.ai', icon: Sparkles, href: '#ai' },
-    { key: 'nav.pricing', icon: CreditCard, href: '#pricing' },
+    { key: 'nav.calendar', icon: Calendar, href: isOnIndexPage ? '#calendar' : '/#calendar' },
+    { key: 'nav.archive', icon: Archive, href: isOnIndexPage ? '#archive' : '/#archive' },
+    { key: 'nav.ai', icon: Sparkles, href: isOnIndexPage ? '#ai' : '/#ai' },
+    { key: 'nav.pricing', icon: CreditCard, href: isOnIndexPage ? '#pricing' : '/#pricing' },
   ];
 
   const handleLogout = async () => {

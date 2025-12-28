@@ -39,22 +39,11 @@ export function Hero() {
 
           {/* Subtitle */}
           <p className="mt-6 text-lg text-muted-foreground md:text-xl lg:text-2xl max-w-2xl mx-auto animate-fade-in-up delay-100 opacity-0">
-            {t('hero.subtitle')}
+            Kalender für Kunstausschreibungen
           </p>
 
-          {/* CTA Buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-200 opacity-0">
-            <Button size="lg" className="gradient-gold text-primary font-semibold px-8 h-12 text-base border-0 shadow-elegant hover:opacity-90 transition-opacity">
-              {t('hero.cta')}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button variant="outline" size="lg" className="px-8 h-12 text-base">
-              {t('hero.cta.secondary')}
-            </Button>
-          </div>
-
           {/* Stats */}
-          <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto animate-fade-in-up delay-300 opacity-0">
+          <div className="mt-12 grid grid-cols-3 gap-8 max-w-lg mx-auto animate-fade-in-up delay-200 opacity-0">
             <div className="text-center">
               <div className="font-display text-3xl font-bold text-foreground">250+</div>
               <div className="text-sm text-muted-foreground mt-1">Ausschreibungen</div>

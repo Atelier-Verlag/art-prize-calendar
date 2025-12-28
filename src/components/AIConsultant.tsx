@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,8 +8,8 @@ import { Sparkles, Send, FileText, Route, Lock } from 'lucide-react';
 
 export function AIConsultant() {
   const { t } = useLanguage();
+  const { isProUser } = useAuth();
   const [prompt, setPrompt] = useState('');
-  const [isProUser] = useState(false);
 
   const features = [
     {
