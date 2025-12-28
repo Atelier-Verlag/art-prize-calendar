@@ -8,6 +8,7 @@ export function Footer() {
   const links = [
     { key: 'footer.imprint', href: '/impressum' },
     { key: 'footer.privacy', href: '/datenschutz' },
+    { key: 'footer.disclaimer', href: '/disclaimer' },
   ];
 
   return (

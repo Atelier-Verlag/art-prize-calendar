@@ -5,11 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Menu, X, Calendar, Archive, Sparkles, CreditCard, LogOut, Crown } from 'lucide-react';
+import { Menu, X, Calendar, Archive, Sparkles, CreditCard, LogOut, Crown, Shield, User } from 'lucide-react';
 
 export function Header() {
   const { t } = useLanguage();
-  const { user, isProUser, signOut } = useAuth();
+  const { user, isProUser, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -61,15 +61,32 @@ export function Header() {
           
           {user ? (
             <>
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:inline-flex border-destructive/50 text-destructive hover:bg-destructive/10"
+                  onClick={() => navigate('/admin')}
+                >
+                  <Shield className="h-4 w-4 mr-1" />
+                  Admin
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex"
+                onClick={() => navigate('/profile')}
+              >
+                <User className="h-4 w-4 mr-1" />
+                Profil
+              </Button>
               {isProUser && (
                 <Badge className="hidden sm:flex gradient-gold text-primary border-0 gap-1">
                   <Crown className="h-3 w-3" />
                   {t('premium.badge')}
                 </Badge>
               )}
-              <span className="hidden sm:inline text-sm text-muted-foreground max-w-[120px] truncate">
-                {user.email}
-              </span>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -141,7 +158,33 @@ export function Header() {
                       {user.email}
                     </span>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleLogout}>
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        navigate('/admin');
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Admin
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Mein Profil
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
                     <LogOut className="h-4 w-4 mr-2" />
                     {t('auth.logout')}
                   </Button>
