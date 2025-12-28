@@ -2,6 +2,7 @@ import { Helmet } from 'react-helmet-async';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useArtPrizes } from '@/hooks/useArtPrizes';
 import { CalendarCard } from '@/components/CalendarCard';
 import { PrizeDetailModal } from '@/components/PrizeDetailModal';
@@ -11,6 +12,7 @@ import { Archive as ArchiveIcon } from 'lucide-react';
 
 export default function Archive() {
   const { t } = useLanguage();
+  const { isProUser } = useAuth();
   const { data: prizes, isLoading } = useArtPrizes(true);
   const [selectedPrize, setSelectedPrize] = useState<ArtPrize | null>(null);
 
@@ -51,7 +53,7 @@ export default function Archive() {
                 >
                   <CalendarCard
                     prize={prize}
-                    isLocked={false}
+                    isProUser={isProUser}
                     onClick={() => setSelectedPrize(prize)}
                   />
                 </div>
@@ -73,6 +75,7 @@ export default function Archive() {
         prize={selectedPrize}
         isOpen={!!selectedPrize}
         onClose={() => setSelectedPrize(null)}
+        isProUser={isProUser}
       />
     </>
   );

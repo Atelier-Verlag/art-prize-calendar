@@ -16,6 +16,26 @@ export const translations: Translations = {
   'nav.pricing': { de: 'Preise', en: 'Pricing', fr: 'Tarifs', es: 'Precios', ko: '요금' },
   'nav.login': { de: 'Anmelden', en: 'Login', fr: 'Connexion', es: 'Iniciar sesión', ko: '로그인' },
   
+  // Auth
+  'auth.login': { de: 'Anmelden', en: 'Login', fr: 'Connexion', es: 'Iniciar sesión', ko: '로그인' },
+  'auth.signup': { de: 'Registrieren', en: 'Sign up', fr: 'S\'inscrire', es: 'Registrarse', ko: '회원가입' },
+  'auth.email': { de: 'E-Mail-Adresse', en: 'Email address', fr: 'Adresse e-mail', es: 'Correo electrónico', ko: '이메일 주소' },
+  'auth.password': { de: 'Passwort', en: 'Password', fr: 'Mot de passe', es: 'Contraseña', ko: '비밀번호' },
+  'auth.logout': { de: 'Abmelden', en: 'Logout', fr: 'Déconnexion', es: 'Cerrar sesión', ko: '로그아웃' },
+  'auth.noAccount': { de: 'Noch kein Konto?', en: 'No account yet?', fr: 'Pas encore de compte?', es: '¿Sin cuenta?', ko: '계정이 없으신가요?' },
+  'auth.hasAccount': { de: 'Bereits registriert?', en: 'Already have an account?', fr: 'Déjà inscrit?', es: '¿Ya tienes cuenta?', ko: '이미 계정이 있으신가요?' },
+  'auth.error.invalid': { de: 'Ungültige Anmeldedaten', en: 'Invalid credentials', fr: 'Identifiants invalides', es: 'Credenciales inválidas', ko: '잘못된 자격 증명' },
+  'auth.error.exists': { de: 'E-Mail bereits registriert', en: 'Email already registered', fr: 'Email déjà enregistré', es: 'Email ya registrado', ko: '이미 등록된 이메일' },
+  'auth.error.password': { de: 'Passwort muss mind. 6 Zeichen haben', en: 'Password must be at least 6 characters', fr: 'Le mot de passe doit contenir au moins 6 caractères', es: 'La contraseña debe tener al menos 6 caracteres', ko: '비밀번호는 최소 6자 이상이어야 합니다' },
+
+  // Premium / Paywall
+  'premium.lockedTitle': { de: '🔒 Premium Ausschreibung', en: '🔒 Premium Call', fr: '🔒 Appel Premium', es: '🔒 Convocatoria Premium', ko: '🔒 프리미엄 공모' },
+  'premium.unlock': { de: 'Jetzt freischalten', en: 'Unlock now', fr: 'Débloquer', es: 'Desbloquear', ko: '지금 잠금 해제' },
+  'premium.upgrade': { de: 'Pro werden', en: 'Go Pro', fr: 'Devenir Pro', es: 'Ser Pro', ko: 'Pro 되기' },
+  'premium.badge': { de: 'Pro', en: 'Pro', fr: 'Pro', es: 'Pro', ko: 'Pro' },
+  'premium.loginFirst': { de: 'Bitte erst anmelden', en: 'Please login first', fr: 'Veuillez d\'abord vous connecter', es: 'Por favor inicia sesión', ko: '먼저 로그인해주세요' },
+  'premium.hiddenInfo': { de: 'Weitere Details nur für Pro-Mitglieder', en: 'More details for Pro members only', fr: 'Plus de détails pour les membres Pro', es: 'Más detalles solo para miembros Pro', ko: 'Pro 회원만 상세정보 확인 가능' },
+  
   // Hero
   'hero.banner': { 
     de: 'Nutzen Sie die nächste große Chance als Pro-Künstler.', 
