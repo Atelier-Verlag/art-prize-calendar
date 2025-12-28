@@ -11,14 +11,28 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[FETCH-PRIZES] ${step}${detailsStr}`);
 };
 
-// Suchbegriffe für Kunstausschreibungen 2026
+// Internationale Suchbegriffe für Kunstausschreibungen 2025/2026
 const SEARCH_QUERIES = [
-  "Ausschreibungen Bildende Kunst 2026",
-  "Kunstwettbewerbe 2026",
-  "Artist Open Calls 2026",
-  "Wettbewerbe Bildende Kunst 2026",
-  "Künstlerstipendien 2026",
-  "Artist Residencies 2026",
+  // DACH Region
+  "Ausschreibungen Bildende Kunst 2025 2026 Deutschland Österreich Schweiz",
+  "Kunstwettbewerbe 2025 2026 Deutschland",
+  "Künstlerstipendien 2025 2026 DACH",
+  // International (English)
+  "International Art Competitions 2025 2026",
+  "Call for Artists 2025 2026 USA",
+  "Artist Grants 2025 2026 Europe",
+  "Art Residency Open Call 2025 2026",
+  "Contemporary Art Prize 2025 2026",
+  // France
+  "Appel à candidature art 2025 2026 France",
+  "Concours d'art contemporain 2025 France",
+  // Italy
+  "Concorsi d'arte 2025 2026 Italia",
+  "Bando arte contemporanea 2025 Italia",
+  // Spain
+  "Convocatoria arte 2025 2026 España",
+  // Netherlands/Belgium
+  "Kunstprijs 2025 2026 Nederland België",
 ];
 
 interface TavilyResult {
@@ -39,6 +53,7 @@ interface ExtractedPrize {
   category: string;
   fee: number | null;
   prize_amount: number | null;
+  isDraft?: boolean;
 }
 
 async function searchWithTavily(query: string, apiKey: string): Promise<TavilyResult[]> {
@@ -174,6 +189,26 @@ Für jeden gefundenen Eintrag extrahiere:
   }
 }
 
+// Fallback: Einfache Extraktion wenn AI fehlschlägt
+function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
+  return searchResults
+    .filter(r => r.title && r.url)
+    .slice(0, 10) // Max 10 Drafts
+    .map(r => ({
+      name: `[ENTWURF] ${r.title.substring(0, 100)}`,
+      deadline: "2025-12-31", // Platzhalter-Deadline
+      website: r.url,
+      description: r.content?.substring(0, 200) || "Keine Beschreibung verfügbar. Bitte manuell prüfen.",
+      organizer: "Unbekannt",
+      region: "International",
+      country: "International",
+      category: "mixed" as const,
+      fee: null,
+      prize_amount: null,
+      isDraft: true,
+    }));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -188,17 +223,24 @@ serve(async (req) => {
   const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
+  // Log ID für spätere Updates
+  let runningLogId: string | null = null;
+
   try {
-    logStep("🤖 Smart Scraper gestartet");
+    logStep("🤖 Kunst-Ausschreibungs-Roboter gestartet");
 
     // Log-Eintrag erstellen: Running
-    await supabaseClient
+    const { data: logEntry } = await supabaseClient
       .from("scraper_logs")
       .insert({
         status: "running",
-        message: "Smart Scraper wurde gestartet - Suche nach Kunstausschreibungen 2026...",
+        message: "Kunst-Ausschreibungs-Roboter gestartet - Internationale Suche läuft...",
         items_found: 0,
-      });
+      })
+      .select("id")
+      .single();
+    
+    runningLogId = logEntry?.id || null;
 
     // API Keys prüfen
     if (!tavilyApiKey) {
@@ -263,9 +305,21 @@ serve(async (req) => {
     // 3. AI-EXTRAKTION: Daten aus Suchergebnissen extrahieren
     let extractedPrizes: ExtractedPrize[] = [];
     let newPrizesCount = 0;
+    let draftCount = 0;
 
     if (uniqueResults.length > 0) {
-      extractedPrizes = await extractPrizesWithAI(uniqueResults, lovableApiKey);
+      try {
+        extractedPrizes = await extractPrizesWithAI(uniqueResults, lovableApiKey);
+      } catch (aiError) {
+        logStep("AI-Extraktion fehlgeschlagen, erstelle Entwürfe", { error: String(aiError) });
+      }
+
+      // FALLBACK: Wenn AI nichts findet, speichere Rohdaten als Entwürfe
+      if (extractedPrizes.length === 0 && uniqueResults.length > 0) {
+        logStep("Fallback: Erstelle Entwürfe aus Suchergebnissen");
+        extractedPrizes = createDraftPrizes(uniqueResults);
+        draftCount = extractedPrizes.length;
+      }
 
       // 4. SPEICHERN: Neue Preise in Datenbank einfügen
       for (const prize of extractedPrizes) {
@@ -277,6 +331,10 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!existing) {
+          // Validiere category gegen erlaubte Werte
+          const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art"];
+          const safeCategory = validCategories.includes(prize.category) ? prize.category : "mixed";
+
           const { error: insertError } = await supabaseClient
             .from("art_prizes")
             .insert({
@@ -287,7 +345,7 @@ serve(async (req) => {
               organizer: prize.organizer,
               region: prize.region,
               country: prize.country,
-              category: prize.category,
+              category: safeCategory,
               fee: prize.fee,
               prize_amount: prize.prize_amount,
               is_archived: false,
@@ -298,7 +356,7 @@ serve(async (req) => {
             logStep(`Fehler beim Speichern von "${prize.name}"`, { error: insertError.message });
           } else {
             newPrizesCount++;
-            logStep(`Neu gespeichert: ${prize.name}`);
+            logStep(`Neu gespeichert: ${prize.name}${prize.isDraft ? ' (Entwurf)' : ''}`);
           }
         } else {
           logStep(`Übersprungen (existiert bereits): ${prize.name}`);
@@ -306,26 +364,41 @@ serve(async (req) => {
       }
     }
 
-    // Erfolgs-Log erstellen
-    const successMessage = `Smart Scraper abgeschlossen: ${uniqueResults.length} Webseiten durchsucht, ${extractedPrizes.length} Ausschreibungen gefunden, ${newPrizesCount} neu gespeichert, ${archivedCount} archiviert.`;
+    // Erfolgs-Log: Running-Eintrag updaten ODER neuen erstellen
+    const successMessage = `Roboter abgeschlossen: ${SEARCH_QUERIES.length} Suchbegriffe, ${uniqueResults.length} Webseiten, ${extractedPrizes.length} Ausschreibungen gefunden, ${newPrizesCount} neu gespeichert${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}, ${archivedCount} archiviert.`;
 
-    await supabaseClient
-      .from("scraper_logs")
-      .insert({
-        status: "success",
-        message: successMessage,
-        items_found: newPrizesCount,
-      });
+    if (runningLogId) {
+      // Update running -> success
+      await supabaseClient
+        .from("scraper_logs")
+        .update({
+          status: "success",
+          message: successMessage,
+          items_found: newPrizesCount,
+        })
+        .eq("id", runningLogId);
+    } else {
+      // Fallback: Neuen Eintrag erstellen
+      await supabaseClient
+        .from("scraper_logs")
+        .insert({
+          status: "success",
+          message: successMessage,
+          items_found: newPrizesCount,
+        });
+    }
 
-    logStep("🎉 Smart Scraper erfolgreich beendet");
+    logStep("🎉 Kunst-Ausschreibungs-Roboter erfolgreich beendet");
 
     return new Response(
       JSON.stringify({
         success: true,
         message: successMessage,
         stats: {
+          queries: SEARCH_QUERIES.length,
           searched: uniqueResults.length,
           extracted: extractedPrizes.length,
+          drafts: draftCount,
           saved: newPrizesCount,
           archived: archivedCount,
         },
@@ -339,14 +412,25 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
 
-    // Fehler-Log erstellen
-    await supabaseClient
-      .from("scraper_logs")
-      .insert({
-        status: "error",
-        message: `Fehler: ${errorMessage}`,
-        items_found: 0,
-      });
+    // Fehler-Log: Running-Eintrag updaten ODER neuen erstellen
+    if (runningLogId) {
+      await supabaseClient
+        .from("scraper_logs")
+        .update({
+          status: "error",
+          message: `Fehler: ${errorMessage}`,
+          items_found: 0,
+        })
+        .eq("id", runningLogId);
+    } else {
+      await supabaseClient
+        .from("scraper_logs")
+        .insert({
+          status: "error",
+          message: `Fehler: ${errorMessage}`,
+          items_found: 0,
+        });
+    }
 
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
