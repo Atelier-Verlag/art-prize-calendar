@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Pencil, Trash2, Award, RefreshCw, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
@@ -104,6 +105,7 @@ export function ArtPrizesManager() {
         website: editingPrize.website,
         description: editingPrize.description,
         organizer: editingPrize.organizer,
+        category: editingPrize.category as any,
       })
       .eq('id', editingPrize.id);
 
@@ -194,10 +196,11 @@ export function ArtPrizesManager() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="w-[40%]">Titel</TableHead>
-                  <TableHead className="w-[15%]">Deadline</TableHead>
-                  <TableHead className="w-[15%] text-center">Archiviert</TableHead>
-                  <TableHead className="w-[30%] text-right">Aktionen</TableHead>
+                  <TableHead className="w-[35%]">Titel</TableHead>
+                  <TableHead className="w-[15%]">Kategorie</TableHead>
+                  <TableHead className="w-[12%]">Deadline</TableHead>
+                  <TableHead className="w-[12%] text-center">Archiviert</TableHead>
+                  <TableHead className="w-[26%] text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -208,6 +211,11 @@ export function ArtPrizesManager() {
                         <p className="font-medium text-foreground line-clamp-1">{prize.name}</p>
                         <p className="text-xs text-muted-foreground line-clamp-1">{prize.organizer}</p>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+                        {prize.category}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">
@@ -295,14 +303,42 @@ export function ArtPrizesManager() {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="edit-deadline">Deadline</Label>
-                <Input
-                  id="edit-deadline"
-                  type="date"
-                  value={editingPrize.deadline}
-                  onChange={(e) => setEditingPrize({ ...editingPrize, deadline: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">Kategorie</Label>
+                  <Select
+                    value={editingPrize.category}
+                    onValueChange={(value) => setEditingPrize({ ...editingPrize, category: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Kunstpreis">Kunstpreis</SelectItem>
+                      <SelectItem value="Wettbewerb">Wettbewerb</SelectItem>
+                      <SelectItem value="grant">Stipendium</SelectItem>
+                      <SelectItem value="painting">Malerei</SelectItem>
+                      <SelectItem value="photography">Fotografie</SelectItem>
+                      <SelectItem value="sculpture">Skulptur</SelectItem>
+                      <SelectItem value="residency">Residenz</SelectItem>
+                      <SelectItem value="mixed">Gemischt</SelectItem>
+                      <SelectItem value="media">Medienkunst</SelectItem>
+                      <SelectItem value="performance">Performance</SelectItem>
+                      <SelectItem value="exhibition">Ausstellung</SelectItem>
+                      <SelectItem value="public_art">Kunst im öffentl. Raum</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-deadline">Deadline</Label>
+                  <Input
+                    id="edit-deadline"
+                    type="date"
+                    value={editingPrize.deadline}
+                    onChange={(e) => setEditingPrize({ ...editingPrize, deadline: e.target.value })}
+                  />
+                </div>
               </div>
               
               <div className="space-y-2">

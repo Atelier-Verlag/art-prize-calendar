@@ -8,7 +8,9 @@ export type Category =
   | 'residency' 
   | 'grant'
   | 'exhibition'
-  | 'public_art';
+  | 'public_art'
+  | 'Kunstpreis'
+  | 'Wettbewerb';
 
 export interface ArtPrize {
   id: string;
@@ -213,6 +215,8 @@ export function getCategoryColor(category: Category): string {
     grant: 'category-grant',
     exhibition: 'category-exhibition',
     public_art: 'category-public-art',
+    Kunstpreis: 'category-kunstpreis',
+    Wettbewerb: 'category-wettbewerb',
   };
   return colors[category];
 }

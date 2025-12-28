@@ -11,10 +11,14 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[FETCH-PRIZES] ${step}${detailsStr}`);
 };
 
-// Reduzierte Suchbegriffe für schnellen Test (max 2-3 Queries)
+// Erweiterte internationale Suchbegriffe für Open Calls 2025/2026
 const SEARCH_QUERIES = [
-  "Ausschreibungen Bildende Kunst 2025 Deutschland",
-  "International Art Open Calls 2025 2026",
+  "International Art Open Calls 2026",
+  "Kunstpreise & Wettbewerbe 2026 Deutschland",
+  "Artist Grants & Scholarships 2026",
+  "Open Call Malerei & Bildhauerei 2026",
+  "Ausschreibungen Bildende Kunst 2026 Deutschland Österreich",
+  "Call for Artists 2026 Europe",
 ];
 
 interface TavilyResult {
@@ -75,12 +79,23 @@ async function extractPrizesWithAI(
     .map((r, i) => `[${i + 1}] Titel: ${r.title}\nURL: ${r.url}\nInhalt: ${r.content}`)
     .join("\n\n---\n\n");
 
-  const systemPrompt = `Du bist ein Experte für Kunstausschreibungen. Extrahiere aus den Suchergebnissen alle relevanten Kunstwettbewerbe, Stipendien und Open Calls für das Jahr 2026.
+  const systemPrompt = `Du bist ein Experte für Kunstausschreibungen. Extrahiere aus den Suchergebnissen alle relevanten Kunstwettbewerbe, Kunstpreise, Stipendien und Open Calls für 2025 und 2026.
 
 WICHTIG:
-- Nur Ausschreibungen mit Deadline in 2026 extrahieren
+- Nur Ausschreibungen mit Deadline in 2025 oder 2026 extrahieren
 - Fokus auf Bildende Kunst (Malerei, Skulptur, Installation, Fotografie, etc.)
 - Keine Musik, Theater oder Literatur-Wettbewerbe
+- Ordne JEDEN Eintrag STRIKT einer der folgenden Kategorien zu!
+
+KATEGORIEN (STRIKT VERWENDEN):
+- "Kunstpreis" = Preise für herausragende Kunstwerke oder Lebenswerk
+- "Wettbewerb" = Wettbewerbe mit Jurierung und Preisvergabe  
+- "grant" = Stipendien und finanzielle Förderungen (Arbeitsstipendien)
+- "painting" = Spezifisch für Malerei
+- "photography" = Spezifisch für Fotografie
+- "sculpture" = Spezifisch für Bildhauerei
+- "residency" = Künstlerresidenzen
+- "mixed" = Mehrere Medien oder nicht eindeutig zuordenbar
 
 Für jeden gefundenen Eintrag extrahiere:
 - name: Titel der Ausschreibung
@@ -90,7 +105,7 @@ Für jeden gefundenen Eintrag extrahiere:
 - organizer: Veranstalter/Organisation
 - region: Region/Stadt (z.B. "Berlin", "Bayern", "Europa")
 - country: Land (z.B. "Deutschland", "Österreich", "International")
-- category: Eine von: painting, sculpture, installation, photography, digital, mixed_media, other
+- category: STRIKT eine von: Kunstpreis, Wettbewerb, grant, painting, photography, sculpture, residency, mixed
 - fee: Teilnahmegebühr in Euro (null wenn kostenlos oder unbekannt)
 - prize_amount: Preisgeld in Euro (null wenn unbekannt)`;
 
@@ -129,7 +144,7 @@ Für jeden gefundenen Eintrag extrahiere:
                       country: { type: "string" },
                       category: { 
                         type: "string", 
-                        enum: ["painting", "sculpture", "installation", "photography", "digital", "mixed_media", "other"] 
+                        enum: ["Kunstpreis", "Wettbewerb", "grant", "painting", "photography", "sculpture", "residency", "mixed"] 
                       },
                       fee: { type: "number", nullable: true },
                       prize_amount: { type: "number", nullable: true },
@@ -313,8 +328,8 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!existing) {
-          // Validiere category gegen erlaubte Werte
-          const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art"];
+          // Validiere category gegen erlaubte Werte (inkl. neue Kategorien)
+          const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art", "Kunstpreis", "Wettbewerb"];
           const safeCategory = validCategories.includes(prize.category) ? prize.category : "mixed";
 
           const { error: insertError } = await supabaseClient
