@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -7,17 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar, Loader2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Auth() {
   const { user, signIn, signUp, loading } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect if already logged in
@@ -49,9 +50,17 @@ export default function Auth() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password.length < 6) {
+    if (password.length < 8) {
       toast({
         title: t('auth.error.password'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        title: language === 'de' ? 'Passwörter stimmen nicht überein' : 'Passwords do not match',
         variant: 'destructive',
       });
       return;
@@ -76,8 +85,8 @@ export default function Auth() {
       }
     } else {
       toast({
-        title: 'Erfolgreich registriert!',
-        description: 'Sie können sich jetzt anmelden.',
+        title: language === 'de' ? 'Erfolgreich registriert!' : 'Successfully registered!',
+        description: language === 'de' ? 'Sie können sich jetzt anmelden.' : 'You can now log in.',
       });
     }
 
@@ -93,7 +102,18 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
+      {/* Back to Calendar Link */}
+      <div className="w-full max-w-md mb-4">
+        <Link 
+          to="/" 
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+          <span>{language === 'de' ? 'Zurück zum Kalender' : 'Back to Calendar'}</span>
+        </Link>
+      </div>
+      
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -177,10 +197,25 @@ export default function Auth() {
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="min. 6 Zeichen"
+                    placeholder={language === 'de' ? 'min. 8 Zeichen' : 'min. 8 characters'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    minLength={8}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm-password">
+                    {language === 'de' ? 'Passwort wiederholen' : 'Confirm Password'}
+                  </Label>
+                  <Input
+                    id="signup-confirm-password"
+                    type="password"
+                    placeholder={language === 'de' ? 'Passwort bestätigen' : 'Confirm password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={8}
                   />
                 </div>
                 <Button

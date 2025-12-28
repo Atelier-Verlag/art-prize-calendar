@@ -92,26 +92,25 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        {/* Category badge */}
-        <Badge className={`${categoryClass} text-white border-0 mb-3`}>
+      <div className="p-4 relative">
+        {/* Category badge - always visible */}
+        <Badge className={`${categoryClass} text-white border-0 mb-3 relative z-10`}>
           {t(`category.${prize.category}`)}
         </Badge>
 
-        {/* Title - locked or visible */}
-        <h3 className="font-display text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-accent transition-colors">
-          {canAccess ? prize.name : t('premium.lockedTitle')}
-        </h3>
+        {/* Content wrapper with blur effect for non-pro */}
+        <div className={`${!canAccess ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
+          {/* Title */}
+          <h3 className="font-display text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-accent transition-colors">
+            {prize.name}
+          </h3>
 
-        {/* Organizer - only for pro users */}
-        {canAccess && (
+          {/* Organizer */}
           <p className="text-sm text-muted-foreground mb-4">
             {prize.organizer}
           </p>
-        )}
 
-        {/* Info grid - only for pro users */}
-        {canAccess ? (
+          {/* Info grid */}
           <div className="space-y-2 text-sm">
             {/* Prize money */}
             {prize.prizeAmount && (
@@ -151,10 +150,15 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
               </div>
             )}
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground mb-4">
-            {t('premium.hiddenInfo')}
-          </p>
+        </div>
+
+        {/* Lock overlay for non-pro users */}
+        {!canAccess && (
+          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+            <div className="bg-background/80 backdrop-blur-sm rounded-full p-4 shadow-lg">
+              <Lock className="h-8 w-8 text-accent" />
+            </div>
+          </div>
         )}
       </div>
 
