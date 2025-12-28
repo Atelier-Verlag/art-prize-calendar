@@ -365,8 +365,8 @@ export default function Admin() {
                       <Bot className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle>Kunstpreis-Roboter</CardTitle>
-                      <CardDescription>Automatische Aktualisierung & Archivierung</CardDescription>
+                      <CardTitle>Kunst-Ausschreibungs-Roboter</CardTitle>
+                      <CardDescription>Internationale Suche via Tavily & AI-Extraktion</CardDescription>
                     </div>
                   </div>
                   <div className="flex gap-2">
