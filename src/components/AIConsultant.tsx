@@ -68,7 +68,7 @@ export function AIConsultant() {
             <CardContent>
               <div className="space-y-4">
                 <Textarea
-                  placeholder="z.B. Ich möchte mich für den Kunstpreis der Stadt München bewerben. Ich arbeite hauptsächlich mit Ölmalerei und mein Werk beschäftigt sich mit urbanen Landschaften..."
+                  placeholder="Ich möchte mich für [Name des Preises] bewerben. Meine Kunst beschäftigt sich mit..."
                   className="min-h-[120px] resize-none"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}

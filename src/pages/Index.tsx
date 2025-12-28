@@ -5,8 +5,11 @@ import { AIConsultant } from '@/components/AIConsultant';
 import { PricingSection } from '@/components/PricingSection';
 import { Footer } from '@/components/Footer';
 import { Helmet } from 'react-helmet-async';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
+  const { user, isProUser } = useAuth();
+
   return (
     <>
       <Helmet>
@@ -22,7 +25,8 @@ const Index = () => {
           <Hero />
           <CalendarGrid />
           <AIConsultant />
-          <PricingSection />
+          {/* Hide pricing for logged-in Pro users */}
+          {!(user && isProUser) && <PricingSection />}
         </main>
         <Footer />
       </div>

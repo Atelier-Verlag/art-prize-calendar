@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isProUser: boolean;
+  isAdmin: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isProUser, setIsProUser] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -27,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles' as any)
-        .select('is_pro_user')
+        .select('is_pro_user, is_admin')
         .eq('id', userId)
         .single();
 
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setIsProUser((data as any)?.is_pro_user ?? false);
+      setIsAdmin((data as any)?.is_admin ?? false);
     } catch (err) {
       console.error('Error loading profile:', err);
     }
@@ -56,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }, 0);
         } else {
           setIsProUser(false);
+          setIsAdmin(false);
         }
         
         setLoading(false);
@@ -101,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsProUser(false);
+    setIsAdmin(false);
   };
 
   const startCheckout = async (priceId: string) => {
@@ -139,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         isProUser,
+        isAdmin,
         loading,
         signIn,
         signUp,
