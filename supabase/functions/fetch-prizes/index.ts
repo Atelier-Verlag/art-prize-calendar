@@ -11,28 +11,10 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[FETCH-PRIZES] ${step}${detailsStr}`);
 };
 
-// Internationale Suchbegriffe für Kunstausschreibungen 2025/2026
+// Reduzierte Suchbegriffe für schnellen Test (max 2-3 Queries)
 const SEARCH_QUERIES = [
-  // DACH Region
-  "Ausschreibungen Bildende Kunst 2025 2026 Deutschland Österreich Schweiz",
-  "Kunstwettbewerbe 2025 2026 Deutschland",
-  "Künstlerstipendien 2025 2026 DACH",
-  // International (English)
-  "International Art Competitions 2025 2026",
-  "Call for Artists 2025 2026 USA",
-  "Artist Grants 2025 2026 Europe",
-  "Art Residency Open Call 2025 2026",
-  "Contemporary Art Prize 2025 2026",
-  // France
-  "Appel à candidature art 2025 2026 France",
-  "Concours d'art contemporain 2025 France",
-  // Italy
-  "Concorsi d'arte 2025 2026 Italia",
-  "Bando arte contemporanea 2025 Italia",
-  // Spain
-  "Convocatoria arte 2025 2026 España",
-  // Netherlands/Belgium
-  "Kunstprijs 2025 2026 Nederland België",
+  "Ausschreibungen Bildende Kunst 2025 Deutschland",
+  "International Art Open Calls 2025 2026",
 ];
 
 interface TavilyResult {
