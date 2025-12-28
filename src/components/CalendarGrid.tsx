@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useArtPrizes, type ArtPrize } from '@/hooks/useArtPrizes';
 import { CalendarCard } from './CalendarCard';
 import { PrizeDetailModal } from './PrizeDetailModal';
@@ -23,9 +24,9 @@ const categories: (Category | 'all')[] = [
 
 export function CalendarGrid() {
   const { t } = useLanguage();
+  const { isProUser } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [selectedPrize, setSelectedPrize] = useState<ArtPrize | null>(null);
-  const [isProUser] = useState(false); // This would come from auth context
 
   const { data: prizes, isLoading } = useArtPrizes(false);
 
@@ -97,12 +98,8 @@ export function CalendarGrid() {
               >
                 <CalendarCard
                   prize={prize}
-                  isLocked={!isProUser && !prize.isShortTerm}
-                  onClick={() => {
-                    if (isProUser || prize.isShortTerm) {
-                      setSelectedPrize(prize);
-                    }
-                  }}
+                  isProUser={isProUser}
+                  onClick={() => setSelectedPrize(prize)}
                 />
               </div>
             ))}
@@ -124,6 +121,7 @@ export function CalendarGrid() {
         prize={selectedPrize}
         isOpen={!!selectedPrize}
         onClose={() => setSelectedPrize(null)}
+        isProUser={isProUser}
       />
     </section>
   );
