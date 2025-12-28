@@ -73,17 +73,34 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
           </DialogHeader>
 
           <div className="space-y-6 mt-4">
-            {/* Deadline highlight - always visible */}
-            <div className="bg-muted/50 rounded-xl p-4 border border-border">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <Calendar className="h-4 w-4" />
-                <span className="font-semibold uppercase tracking-wide">
-                  {t('calendar.deadline')}
-                </span>
+            {/* Deadline and Fee highlight - always visible */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 bg-muted/50 rounded-xl p-4 border border-border">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <Calendar className="h-4 w-4" />
+                  <span className="font-semibold uppercase tracking-wide">
+                    {t('calendar.deadline')}
+                  </span>
+                </div>
+                <div className="font-display text-2xl font-bold text-foreground">
+                  {formatDeadline(prize.deadline, language)}
+                </div>
               </div>
-              <div className="font-display text-2xl font-bold text-foreground">
-                {formatDeadline(prize.deadline, language)}
-              </div>
+              
+              {/* Fee warning - prominent */}
+              {prize.fee && (
+                <div className="sm:w-auto bg-destructive/20 rounded-xl p-4 border-2 border-destructive">
+                  <div className="flex items-center gap-2 text-sm text-destructive mb-1">
+                    <ThumbsDown className="h-4 w-4" />
+                    <span className="font-bold uppercase tracking-wide">
+                      Achtung!
+                    </span>
+                  </div>
+                  <div className="font-display text-2xl font-bold text-destructive">
+                    👎 {prize.fee} € Gebühr!
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Pro content or upgrade CTA */}
@@ -129,17 +146,7 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
                     </div>
                   )}
 
-                  {prize.fee && (
-                    <div className="bg-destructive/10 rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-sm text-destructive mb-1">
-                        <ThumbsDown className="h-4 w-4" />
-                        <span>{t('calendar.fee')}</span>
-                      </div>
-                      <div className="font-semibold text-destructive">
-                        {prize.fee} €
-                      </div>
-                    </div>
-                  )}
+                  {/* Fee is now shown at the top, removed from grid */}
                 </div>
 
                 <Separator />

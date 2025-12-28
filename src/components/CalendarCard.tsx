@@ -93,10 +93,20 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
 
       {/* Content */}
       <div className="p-4 relative">
-        {/* Category badge - always visible */}
-        <Badge className={`${categoryClass} text-white border-0 mb-3 relative z-10`}>
-          {t(`category.${prize.category}`)}
-        </Badge>
+        {/* Category badge and fee warning - always visible */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <Badge className={`${categoryClass} text-white border-0 relative z-10`}>
+            {t(`category.${prize.category}`)}
+          </Badge>
+          
+          {/* Fee warning - prominent at top */}
+          {prize.fee && (
+            <Badge className="bg-destructive text-destructive-foreground border-0 font-bold relative z-10 animate-pulse-soft">
+              <ThumbsDown className="h-3 w-3 mr-1" />
+              {prize.fee} € Gebühr!
+            </Badge>
+          )}
+        </div>
 
         {/* Content wrapper with blur effect for non-pro */}
         <div className={`${!canAccess ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
@@ -139,14 +149,6 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
                     ? `≤ ${prize.ageMax} ${language === 'de' ? 'Jahre' : 'years'}`
                     : `≥ ${prize.ageMin} ${language === 'de' ? 'Jahre' : 'years'}`}
                 </span>
-              </div>
-            )}
-
-            {/* Fee warning */}
-            {prize.fee && (
-              <div className="flex items-center gap-2 text-destructive font-medium bg-destructive/10 rounded-lg px-2 py-1.5 -mx-2">
-                <ThumbsDown className="h-4 w-4" />
-                <span>{t('calendar.fee')}: {prize.fee} €</span>
               </div>
             )}
           </div>
