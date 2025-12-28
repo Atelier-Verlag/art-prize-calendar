@@ -81,19 +81,46 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_admin: boolean
           is_pro_user: boolean
           updated_at: string
         }
         Insert: {
           created_at?: string
           id: string
+          is_admin?: boolean
           is_pro_user?: boolean
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          is_admin?: boolean
           is_pro_user?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      site_content: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          key?: string
           updated_at?: string
         }
         Relationships: []
@@ -103,7 +130,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       art_category:
