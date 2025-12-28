@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe } from 'lucide-react';
+import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -443,6 +444,9 @@ export default function Admin() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Art Prizes Manager Section */}
+            <ArtPrizesManager />
 
             {/* Scraper Sources Section */}
             <Card className="mb-8">
