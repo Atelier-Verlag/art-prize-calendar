@@ -10,6 +10,8 @@ import type { Category } from '@/data/mockArtPrizes';
 
 const categories: (Category | 'all')[] = [
   'all',
+  'Kunstpreis',
+  'Wettbewerb',
   'painting',
   'sculpture',
   'media',
