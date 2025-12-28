@@ -26,7 +26,7 @@ serve(async (req) => {
     logStep("Roboter gestartet");
 
     // Log-Eintrag erstellen: Running
-    const { error: insertError } = await supabaseClient
+    await supabaseClient
       .from("scraper_logs")
       .insert({
         status: "running",
@@ -34,36 +34,80 @@ serve(async (req) => {
         items_found: 0,
       });
 
-    if (insertError) {
-      logStep("Fehler beim Erstellen des Log-Eintrags", insertError);
-      throw new Error(`Log-Eintrag konnte nicht erstellt werden: ${insertError.message}`);
+    logStep("Starte Archivierung abgelaufener Preise");
+
+    // Abgelaufene Kunstpreise archivieren
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data: expiredPrizes, error: fetchError } = await supabaseClient
+      .from("art_prizes")
+      .select("id")
+      .eq("is_archived", false)
+      .lt("deadline", today);
+
+    if (fetchError) {
+      throw new Error(`Fehler beim Abrufen abgelaufener Preise: ${fetchError.message}`);
     }
 
-    logStep("Log-Eintrag erstellt");
+    const expiredCount = expiredPrizes?.length || 0;
+    logStep(`Gefunden: ${expiredCount} abgelaufene Preise`);
 
-    // TODO: Hier kommt später die Scraping-Logik
-    // Für jetzt simulieren wir eine kurze Verarbeitung
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    let archivedCount = 0;
+    if (expiredCount > 0) {
+      const expiredIds = expiredPrizes!.map(p => p.id);
+      
+      const { error: updateError } = await supabaseClient
+        .from("art_prizes")
+        .update({ is_archived: true })
+        .in("id", expiredIds);
+
+      if (updateError) {
+        throw new Error(`Fehler beim Archivieren: ${updateError.message}`);
+      }
+      
+      archivedCount = expiredCount;
+      logStep(`${archivedCount} Preise wurden archiviert`);
+    }
+
+    // Aktive Quellen abrufen
+    const { data: sources, error: sourcesError } = await supabaseClient
+      .from("scraper_sources")
+      .select("*")
+      .eq("active", true);
+
+    if (sourcesError) {
+      logStep("Warnung: Konnte Quellen nicht abrufen", sourcesError);
+    }
+
+    const activeSourcesCount = sources?.length || 0;
+    logStep(`Aktive Quellen: ${activeSourcesCount}`);
+
+    // TODO: Hier kommt später die Scraping-Logik für jede Quelle
+    // for (const source of sources || []) {
+    //   // Scraping-Logik
+    // }
 
     // Erfolgs-Log erstellen
-    const { error: successLogError } = await supabaseClient
+    const successMessage = archivedCount > 0
+      ? `${archivedCount} abgelaufene Preise archiviert. ${activeSourcesCount} Quellen verfügbar. Scraping-Logik wird später implementiert.`
+      : `Keine abgelaufenen Preise gefunden. ${activeSourcesCount} Quellen verfügbar. Scraping-Logik wird später implementiert.`;
+
+    await supabaseClient
       .from("scraper_logs")
       .insert({
         status: "success",
-        message: "Roboter ist bereit. Scraping-Logik wird später implementiert.",
-        items_found: 0,
+        message: successMessage,
+        items_found: archivedCount,
       });
-
-    if (successLogError) {
-      logStep("Fehler beim Erstellen des Erfolgs-Logs", successLogError);
-    }
 
     logStep("Roboter erfolgreich beendet");
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Kunstpreis-Roboter ist bereit! Die Scraping-Logik wird später hinzugefügt.",
+        message: successMessage,
+        archived: archivedCount,
+        sources: activeSourcesCount,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

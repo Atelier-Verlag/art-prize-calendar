@@ -7,10 +7,12 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -22,6 +24,14 @@ interface ScraperLog {
   status: 'success' | 'error' | 'running';
   message: string;
   items_found: number;
+}
+
+interface ScraperSource {
+  id: string;
+  created_at: string;
+  url: string;
+  name: string;
+  active: boolean;
 }
 
 export default function Admin() {
@@ -39,6 +49,13 @@ export default function Admin() {
   const [scraperRunning, setScraperRunning] = useState(false);
   const [scraperLogs, setScraperLogs] = useState<ScraperLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
+  
+  // Scraper Sources
+  const [scraperSources, setScraperSources] = useState<ScraperSource[]>([]);
+  const [loadingSources, setLoadingSources] = useState(true);
+  const [newSourceName, setNewSourceName] = useState('');
+  const [newSourceUrl, setNewSourceUrl] = useState('');
+  const [addingSource, setAddingSource] = useState(false);
 
   // Redirect non-admins
   useEffect(() => {
@@ -97,9 +114,26 @@ export default function Admin() {
     setLoadingLogs(false);
   };
 
+  // Load scraper sources
+  const loadScraperSources = async () => {
+    setLoadingSources(true);
+    const { data, error } = await supabase
+      .from('scraper_sources' as any)
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error loading scraper sources:', error);
+    } else if (data) {
+      setScraperSources(data as unknown as ScraperSource[]);
+    }
+    setLoadingSources(false);
+  };
+
   useEffect(() => {
     if (user && isAdmin) {
       loadScraperLogs();
+      loadScraperSources();
     }
   }, [user, isAdmin]);
 
@@ -154,6 +188,92 @@ export default function Admin() {
       });
     } finally {
       setScraperRunning(false);
+    }
+  };
+
+  const handleAddSource = async () => {
+    if (!newSourceName.trim() || !newSourceUrl.trim()) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte Name und URL eingeben.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setAddingSource(true);
+    
+    const { error } = await supabase
+      .from('scraper_sources' as any)
+      .insert({
+        name: newSourceName.trim(),
+        url: newSourceUrl.trim(),
+        active: true,
+      });
+
+    if (error) {
+      console.error('Error adding source:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Quelle konnte nicht hinzugefügt werden.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Quelle hinzugefügt',
+        description: `${newSourceName} wurde erfolgreich hinzugefügt.`,
+      });
+      setNewSourceName('');
+      setNewSourceUrl('');
+      await loadScraperSources();
+    }
+    
+    setAddingSource(false);
+  };
+
+  const handleToggleSource = async (id: string, active: boolean) => {
+    const { error } = await supabase
+      .from('scraper_sources' as any)
+      .update({ active })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error toggling source:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Status konnte nicht geändert werden.',
+        variant: 'destructive',
+      });
+    } else {
+      setScraperSources(prev => 
+        prev.map(s => s.id === id ? { ...s, active } : s)
+      );
+    }
+  };
+
+  const handleDeleteSource = async (id: string, name: string) => {
+    if (!confirm(`Möchten Sie die Quelle "${name}" wirklich löschen?`)) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('scraper_sources' as any)
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting source:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Quelle konnte nicht gelöscht werden.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Gelöscht',
+        description: `${name} wurde entfernt.`,
+      });
+      setScraperSources(prev => prev.filter(s => s.id !== id));
     }
   };
 
@@ -239,14 +359,14 @@ export default function Admin() {
             {/* Scraper Section */}
             <Card className="mb-8">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Bot className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <CardTitle>Kunstpreis-Roboter</CardTitle>
-                      <CardDescription>Automatische Aktualisierung der Kunstpreise</CardDescription>
+                      <CardDescription>Automatische Aktualisierung & Archivierung</CardDescription>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -272,7 +392,7 @@ export default function Admin() {
                       ) : (
                         <>
                           <RefreshCw className="h-4 w-4 mr-2" />
-                          🔄 Kunstpreis-Roboter starten
+                          🔄 Roboter starten
                         </>
                       )}
                     </Button>
@@ -308,7 +428,7 @@ export default function Admin() {
                               </span>
                               {log.items_found > 0 && (
                                 <span className="text-xs text-primary font-medium">
-                                  {log.items_found} gefunden
+                                  {log.items_found} archiviert
                                 </span>
                               )}
                             </div>
@@ -321,6 +441,110 @@ export default function Admin() {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Scraper Sources Section */}
+            <Card className="mb-8">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Globe className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Roboter-Quellen</CardTitle>
+                    <CardDescription>Websites, die der Roboter durchsuchen soll</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Add new source */}
+                <div className="flex gap-2 flex-wrap">
+                  <Input
+                    placeholder="Name (z.B. Kunstforum)"
+                    value={newSourceName}
+                    onChange={(e) => setNewSourceName(e.target.value)}
+                    className="flex-1 min-w-[150px]"
+                  />
+                  <Input
+                    placeholder="URL (z.B. https://kunstforum.de/wettbewerbe)"
+                    value={newSourceUrl}
+                    onChange={(e) => setNewSourceUrl(e.target.value)}
+                    className="flex-[2] min-w-[250px]"
+                  />
+                  <Button
+                    onClick={handleAddSource}
+                    disabled={addingSource || !newSourceName.trim() || !newSourceUrl.trim()}
+                    className="gradient-gold text-primary font-semibold border-0"
+                  >
+                    {addingSource ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Hinzufügen
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Sources list */}
+                {loadingSources ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : scraperSources.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+                    Noch keine Quellen hinzugefügt. Fügen Sie oben eine URL hinzu.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {scraperSources.map((source) => (
+                      <div
+                        key={source.id}
+                        className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${
+                          source.active 
+                            ? 'bg-muted/50 border-border/50' 
+                            : 'bg-muted/20 border-border/30 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Link className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{source.name}</p>
+                            <a 
+                              href={source.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline truncate block"
+                            >
+                              {source.url}
+                            </a>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {source.active ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                            <Switch
+                              checked={source.active}
+                              onCheckedChange={(checked) => handleToggleSource(source.id, checked)}
+                            />
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSource(source.id, source.name)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
