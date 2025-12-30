@@ -21,6 +21,7 @@ export type Database = {
           category: Database["public"]["Enums"]["art_category"]
           country: string
           created_at: string
+          currency: string
           deadline: string
           description: string
           fee: number | null
@@ -41,6 +42,7 @@ export type Database = {
           category: Database["public"]["Enums"]["art_category"]
           country: string
           created_at?: string
+          currency?: string
           deadline: string
           description: string
           fee?: number | null
@@ -61,6 +63,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["art_category"]
           country?: string
           created_at?: string
+          currency?: string
           deadline?: string
           description?: string
           fee?: number | null
