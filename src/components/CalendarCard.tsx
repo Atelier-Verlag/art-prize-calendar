@@ -66,27 +66,27 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
       {/* Deadline header */}
       <div className={`
         px-4 py-3 text-center border-b border-border
-        ${isSoon ? 'bg-destructive/10' : 'bg-muted/50'}
+        ${isSoon ? 'bg-destructive/10' : 'bg-sky-100 dark:bg-sky-900/30'}
       `}>
         <div className="flex items-center justify-center gap-2">
-          <Calendar className={`h-4 w-4 ${isSoon ? 'text-destructive' : 'text-muted-foreground'}`} />
+          <Calendar className={`h-4 w-4 ${isSoon ? 'text-destructive' : 'text-sky-700 dark:text-sky-300'}`} />
           <span className={`
             text-xs font-bold uppercase tracking-wider
-            ${isSoon ? 'text-destructive animate-pulse-soft' : 'text-muted-foreground'}
+            ${isSoon ? 'text-destructive animate-pulse-soft' : 'text-sky-700 dark:text-sky-300'}
           `}>
             {t('calendar.deadline')}
           </span>
         </div>
         <div className={`
           font-display text-2xl font-bold mt-1
-          ${isSoon ? 'text-destructive' : 'text-foreground'}
+          ${isSoon ? 'text-destructive' : 'text-sky-900 dark:text-sky-100'}
         `}>
           {formatDeadline(prize.deadline, language)}
         </div>
         {daysLeft > 0 && (
           <div className={`
             text-sm mt-1
-            ${isSoon ? 'text-destructive font-semibold' : 'text-muted-foreground'}
+            ${isSoon ? 'text-destructive font-semibold' : 'text-sky-700 dark:text-sky-300'}
           `}>
             {daysLeft} {language === 'de' ? 'Tage' : 'days'}
           </div>
@@ -97,14 +97,14 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
       <div className="p-4 relative">
         {/* Category badge and fee warning - always visible */}
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <Badge className={`${categoryClass} text-white border-0 relative z-10`}>
+          <Badge className={`${categoryClass} text-white border-0 relative z-10 text-sm px-3 py-1`}>
             {prize.category}
           </Badge>
           
           {/* Fee warning - prominent at top */}
           {prize.fee && (
-            <Badge className="bg-destructive text-destructive-foreground border-0 font-bold relative z-10 animate-pulse-soft">
-              <ThumbsDown className="h-3 w-3 mr-1" />
+            <Badge className="bg-destructive text-destructive-foreground border-0 font-bold relative z-10 animate-pulse-soft text-sm px-3 py-1">
+              <ThumbsDown className="h-4 w-4 mr-1 fill-current" />
               {prize.fee} € Gebühr!
             </Badge>
           )}
