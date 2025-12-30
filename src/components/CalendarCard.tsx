@@ -6,7 +6,7 @@ import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lock, ThumbsDown, MapPin, Banknote, Users, ExternalLink, Calendar } from 'lucide-react';
+import { Lock, ThumbsDown, MapPin, Banknote, Users, ExternalLink, Calendar, Palette, Globe } from 'lucide-react';
 
 interface CalendarCardProps {
   prize: ArtPrize;
@@ -122,6 +122,25 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
             {prize.organizer}
           </p>
 
+          {/* Info badges row */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {/* Geographic scope badge */}
+            {prize.region && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 flex items-center gap-1 bg-muted/50">
+                <Globe className="h-3 w-3" />
+                {prize.region}
+              </Badge>
+            )}
+            
+            {/* Discipline badge - derive from category or show "Alle Sparten" */}
+            <Badge variant="outline" className="text-xs px-2 py-0.5 flex items-center gap-1 bg-muted/50">
+              <Palette className="h-3 w-3" />
+              {['Malerei', 'Skulptur', 'Fotografie', 'Mixed Media', 'Performance', 'Installation', 'Medienkunst'].includes(prize.category) 
+                ? `Sparte: ${prize.category}` 
+                : 'Alle Sparten'}
+            </Badge>
+          </div>
+
           {/* Info grid */}
           <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
             {/* Prize money */}
@@ -134,13 +153,11 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
               </div>
             )}
 
-            {/* Region */}
-            {(prize.region || prize.country) && (
+            {/* Country */}
+            {prize.country && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4 shrink-0" />
-                <span className="truncate">
-                  {[prize.region, prize.country].filter(Boolean).join(', ')}
-                </span>
+                <span className="truncate">{prize.country}</span>
               </div>
             )}
 

@@ -41,22 +41,6 @@ export function Hero() {
           <p className="mt-6 text-lg text-muted-foreground md:text-xl lg:text-2xl max-w-3xl mx-auto animate-fade-in-up delay-100 opacity-0">
             Der Kalender für Kunstausschreibungen für KünstlerInnen und Künstler – sorgfältig kuratiert, aktuell und laufend aktualisiert.
           </p>
-
-          {/* Stats */}
-          <div className="mt-12 grid grid-cols-3 gap-8 max-w-lg mx-auto animate-fade-in-up delay-200 opacity-0">
-            <div className="text-center">
-              <div className="font-display text-3xl font-bold text-foreground">250+</div>
-              <div className="text-sm text-muted-foreground mt-1">Ausschreibungen</div>
-            </div>
-            <div className="text-center">
-              <div className="font-display text-3xl font-bold text-foreground">45</div>
-              <div className="text-sm text-muted-foreground mt-1">Länder</div>
-            </div>
-            <div className="text-center">
-              <div className="font-display text-3xl font-bold text-foreground">€2M+</div>
-              <div className="text-sm text-muted-foreground mt-1">Preisgelder</div>
-            </div>
-          </div>
         </div>
       </div>
     </section>

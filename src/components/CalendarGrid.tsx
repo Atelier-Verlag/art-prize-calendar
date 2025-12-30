@@ -8,34 +8,30 @@ import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
 import type { Category } from '@/data/mockArtPrizes';
 
-const categories: (Category | 'all')[] = [
-  'all',
-  'Kunstpreis',
-  'Wettbewerb',
-  'Malerei',
-  'Skulptur',
-  'Fotografie',
-  'Mixed Media',
-  'Performance',
-  'Installation',
-  'Residenz',
-  'Förderung',
-  'Stipendium',
-  'Ausstellung',
-  'Kunst am Bau',
-  'Medienkunst',
-];
+// Award type filters (editorial categories)
+const awardTypeFilters = [
+  { value: 'all', label: 'Alle' },
+  { value: 'Kunstpreis', label: 'Kunstpreise' },
+  { value: 'Wettbewerb', label: 'Wettbewerbe' },
+  { value: 'Stipendium', label: 'Stipendien' },
+  { value: 'Residenz', label: 'Residencies' },
+  { value: 'Ausstellung', label: 'Ausstellungen' },
+  { value: 'Kunst am Bau', label: 'Kunst am Bau' },
+] as const;
+
+type AwardTypeFilter = typeof awardTypeFilters[number]['value'];
 
 export function CalendarGrid() {
   const { t } = useLanguage();
   const { isProUser } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<AwardTypeFilter>('all');
   const [selectedPrize, setSelectedPrize] = useState<ArtPrize | null>(null);
 
   const { data: prizes, isLoading } = useArtPrizes(false);
 
   const filteredPrizes = (prizes || []).filter((prize) => {
     if (selectedCategory === 'all') return true;
+    // Match category to filter value
     return prize.category === selectedCategory;
   });
 
@@ -57,19 +53,19 @@ export function CalendarGrid() {
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
+            {awardTypeFilters.map((filter) => (
               <Button
-                key={category}
-                variant={selectedCategory === category ? 'default' : 'outline'}
+                key={filter.value}
+                variant={selectedCategory === filter.value ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setSelectedCategory(filter.value)}
                 className={
-                  selectedCategory === category
+                  selectedCategory === filter.value
                     ? 'gradient-gold text-primary border-0'
                     : ''
                 }
               >
-                {category === 'all' ? t('calendar.all') : category}
+                {filter.label}
               </Button>
             ))}
           </div>
