@@ -103,9 +103,9 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
           
           {/* Fee warning - prominent at top */}
           {prize.fee && (
-            <Badge className="bg-destructive text-destructive-foreground border-0 font-bold relative z-10 animate-pulse-soft text-sm px-3 py-1">
-              <ThumbsDown className="h-4 w-4 mr-1 fill-current" />
-              {prize.fee} € Gebühr!
+            <Badge className="bg-destructive border-0 font-bold relative z-10 animate-pulse-soft text-sm px-3 py-1.5 flex items-center gap-1.5">
+              <ThumbsDown className="w-6 h-6 text-black fill-black stroke-[2.5]" />
+              <span className="text-destructive-foreground">{prize.fee} € Gebühr!</span>
             </Badge>
           )}
         </div>
