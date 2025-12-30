@@ -1,15 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Category } from '@/data/mockArtPrizes';
+import type { Category, Sparte } from '@/data/mockArtPrizes';
 
 export interface ArtPrize {
   id: string;
   name: string;
   organizer: string;
   category: Category;
+  sparte: Sparte; // Discipline field
   deadline: string;
   prizeAmount: number | null;
-  benefitDetails: string | null; // Flexible text-based benefit description
+  benefitDetails: string | null;
   currency: string;
   region: string;
   country: string;
@@ -86,12 +87,55 @@ function generateBenefitDetails(dbPrize: any): string | null {
   return null;
 }
 
+// Derive Sparte from category if not a proper editorial category
+function deriveSparteFromCategory(category: string): Sparte {
+  const spartenMap: Record<string, Sparte> = {
+    'Malerei': 'Malerei',
+    'Skulptur': 'Skulptur',
+    'Fotografie': 'Fotografie',
+    'Mixed Media': 'Mixed Media',
+    'Performance': 'Performance',
+    'Installation': 'Installation',
+    'Medienkunst': 'Medienkunst',
+    'painting': 'Malerei',
+    'sculpture': 'Skulptur',
+    'photography': 'Fotografie',
+    'mixed': 'Mixed Media',
+    'media': 'Medienkunst',
+    'performance': 'Performance',
+  };
+  return spartenMap[category] || 'Alle Bereiche';
+}
+
+// Map category to proper editorial category
+function mapToEditorialCategory(category: string): Category {
+  const categoryMap: Record<string, Category> = {
+    'Kunstpreis': 'Kunstpreis',
+    'Wettbewerb': 'Wettbewerb',
+    'Stipendium': 'Stipendium',
+    'Förderung': 'Förderung',
+    'Residenz': 'Residenz',
+    'Ausstellung': 'Ausstellung',
+    'Kunst am Bau': 'Kunst am Bau',
+    // English mappings
+    'grant': 'Förderung',
+    'residency': 'Residenz',
+    'exhibition': 'Ausstellung',
+    'public_art': 'Kunst am Bau',
+  };
+  return categoryMap[category] || 'Wettbewerb';
+}
+
 function mapDbPrizeToArtPrize(dbPrize: any): ArtPrize {
+  const editorialCategory = mapToEditorialCategory(dbPrize.category);
+  const sparte = deriveSparteFromCategory(dbPrize.category);
+  
   return {
     id: dbPrize.id,
     name: dbPrize.name,
     organizer: dbPrize.organizer,
-    category: dbPrize.category as Category,
+    category: editorialCategory,
+    sparte: sparte,
     deadline: dbPrize.deadline,
     prizeAmount: dbPrize.prize_amount,
     benefitDetails: generateBenefitDetails(dbPrize),

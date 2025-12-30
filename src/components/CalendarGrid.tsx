@@ -6,10 +6,10 @@ import { CalendarCard } from './CalendarCard';
 import { PrizeDetailModal } from './PrizeDetailModal';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
-import type { Category } from '@/data/mockArtPrizes';
+import { getCategoryFilterColor, type Category } from '@/data/mockArtPrizes';
 
-// Award type filters (editorial categories)
-const awardTypeFilters = [
+// Static navigation filters in exact order
+const awardTypeFilters: { value: Category | 'all'; label: string }[] = [
   { value: 'all', label: 'Alle' },
   { value: 'Kunstpreis', label: 'Kunstpreise' },
   { value: 'Wettbewerb', label: 'Wettbewerbe' },
@@ -18,21 +18,18 @@ const awardTypeFilters = [
   { value: 'Residenz', label: 'Residencies' },
   { value: 'Ausstellung', label: 'Ausstellungsmöglichkeiten' },
   { value: 'Kunst am Bau', label: 'Kunst am Bau' },
-] as const;
-
-type AwardTypeFilter = typeof awardTypeFilters[number]['value'];
+];
 
 export function CalendarGrid() {
   const { t } = useLanguage();
   const { isProUser } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState<AwardTypeFilter>('all');
+  const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [selectedPrize, setSelectedPrize] = useState<ArtPrize | null>(null);
 
   const { data: prizes, isLoading } = useArtPrizes(false);
 
   const filteredPrizes = (prizes || []).filter((prize) => {
     if (selectedCategory === 'all') return true;
-    // Match category to filter value
     return prize.category === selectedCategory;
   });
 
@@ -54,21 +51,22 @@ export function CalendarGrid() {
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {awardTypeFilters.map((filter) => (
-              <Button
-                key={filter.value}
-                variant={selectedCategory === filter.value ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory(filter.value)}
-                className={
-                  selectedCategory === filter.value
-                    ? 'gradient-gold text-primary border-0'
-                    : ''
-                }
-              >
-                {filter.label}
-              </Button>
-            ))}
+            {awardTypeFilters.map((filter) => {
+              const isActive = selectedCategory === filter.value;
+              const activeColorClass = getCategoryFilterColor(filter.value, isActive);
+              
+              return (
+                <Button
+                  key={filter.value}
+                  variant={isActive ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCategory(filter.value)}
+                  className={isActive ? activeColorClass : ''}
+                >
+                  {filter.label}
+                </Button>
+              );
+            })}
           </div>
         </div>
 
