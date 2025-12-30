@@ -39,7 +39,7 @@ export function Hero() {
 
           {/* Subtitle */}
           <p className="mt-6 text-lg text-muted-foreground md:text-xl lg:text-2xl max-w-3xl mx-auto animate-fade-in-up delay-100 opacity-0">
-            Der umfassende Kalender für Kunstausschreibungen für Künstlerinnen und Künstler – sorgfältig kuratiert
+            Der Kalender für Kunstausschreibungen für KünstlerInnen und Künstler – sorgfältig kuratiert, aktuell und laufend aktualisiert.
           </p>
 
           {/* Stats */}
