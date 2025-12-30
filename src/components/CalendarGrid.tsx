@@ -12,16 +12,18 @@ const categories: (Category | 'all')[] = [
   'all',
   'Kunstpreis',
   'Wettbewerb',
-  'painting',
-  'sculpture',
-  'media',
-  'photography',
-  'performance',
-  'mixed',
-  'residency',
-  'grant',
-  'exhibition',
-  'public_art',
+  'Malerei',
+  'Skulptur',
+  'Fotografie',
+  'Mixed Media',
+  'Performance',
+  'Installation',
+  'Residenz',
+  'Förderung',
+  'Stipendium',
+  'Ausstellung',
+  'Kunst am Bau',
+  'Medienkunst',
 ];
 
 export function CalendarGrid() {
@@ -67,7 +69,7 @@ export function CalendarGrid() {
                     : ''
                 }
               >
-                {category === 'all' ? t('calendar.all') : t(`category.${category}`)}
+                {category === 'all' ? t('calendar.all') : category}
               </Button>
             ))}
           </div>
