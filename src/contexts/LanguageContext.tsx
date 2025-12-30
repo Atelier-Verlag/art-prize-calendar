@@ -14,6 +14,7 @@ export const translations: Translations = {
   'nav.archive': { de: 'Archiv', en: 'Archive', fr: 'Archives', es: 'Archivo', ko: '아카이브' },
   'nav.ai': { de: 'KI-Berater', en: 'AI Consultant', fr: 'Consultant IA', es: 'Consultor IA', ko: 'AI 컨설턴트' },
   'nav.pricing': { de: 'Preise', en: 'Pricing', fr: 'Tarifs', es: 'Precios', ko: '요금' },
+  'nav.subscriptions': { de: 'Abonnements', en: 'Subscriptions', fr: 'Abonnements', es: 'Suscripciones', ko: '구독' },
   'nav.login': { de: 'Anmelden', en: 'Login', fr: 'Connexion', es: 'Iniciar sesión', ko: '로그인' },
   
   // Auth
@@ -89,7 +90,7 @@ export const translations: Translations = {
   'category.Wettbewerb': { de: 'Wettbewerb', en: 'Competition', fr: 'Concours', es: 'Concurso', ko: '경쟁' },
 
   // Pricing
-  'pricing.title': { de: 'Einfache Preise', en: 'Simple Pricing', fr: 'Tarifs Simples', es: 'Precios Simples', ko: '간단한 요금' },
+  'pricing.title': { de: 'Unsere Abonnements', en: 'Our Subscriptions', fr: 'Nos Abonnements', es: 'Nuestras Suscripciones', ko: '구독 플랜' },
   'pricing.subtitle': { de: 'Wählen Sie den Plan, der zu Ihnen passt', en: 'Choose the plan that fits you', fr: 'Choisissez le plan qui vous convient', es: 'Elige el plan que te convenga', ko: '맞는 플랜을 선택하세요' },
   'pricing.free': { de: 'Kostenlos', en: 'Free', fr: 'Gratuit', es: 'Gratis', ko: '무료' },
   'pricing.free.desc': { de: 'Nur kurzfristige Ausschreibungen', en: 'Short-term calls only', fr: 'Appels à court terme uniquement', es: 'Solo convocatorias a corto plazo', ko: '단기 공모만' },

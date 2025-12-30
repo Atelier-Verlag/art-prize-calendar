@@ -55,36 +55,11 @@ export default function Disclaimer() {
               {content ? (
                 <div dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }} />
               ) : (
-                <>
-                  <section className="mb-8">
-                    <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-                      Haftungsausschluss
-                    </h2>
-                    <p className="text-muted-foreground">
-                      [Hier können Sie Ihren Haftungsausschluss einfügen]
-                    </p>
-                  </section>
-
-                  <section className="mb-8">
-                    <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-                      Haftung für Inhalte
-                    </h2>
-                    <p className="text-muted-foreground">
-                      Die Inhalte unserer Seiten wurden mit größter Sorgfalt erstellt. 
-                      Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen.
-                    </p>
-                  </section>
-
-                  <section className="mb-8">
-                    <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-                      Haftung für Links
-                    </h2>
-                    <p className="text-muted-foreground">
-                      Unser Angebot enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir keinen Einfluss haben. 
-                      Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen.
-                    </p>
-                  </section>
-                </>
+                <section className="mb-8">
+                  <p className="text-muted-foreground leading-relaxed">
+                    Die Inhalte unserer Seiten wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte (insbesondere Fristen und Preisgelder) können wir jedoch keine Gewähr übernehmen. Maßgeblich und rechtlich bindend sind ausschließlich die Angaben auf den Original-Webseiten der jeweiligen Ausschreiber. Wir übernehmen keine Haftung für Schäden, die durch die Nutzung der hier bereitgestellten Informationen entstehen.
+                  </p>
+                </section>
               )}
             </div>
           </div>

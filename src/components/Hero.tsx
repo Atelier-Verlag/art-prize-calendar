@@ -14,11 +14,11 @@ export function Hero() {
       </div>
 
       {/* Banner */}
-      <div className="gradient-gold py-2.5 text-center">
-        <p className="text-sm font-medium text-primary flex items-center justify-center gap-2">
-          <Sparkles className="h-4 w-4" />
+      <div className="gradient-gold py-3 text-center">
+        <p className="text-base font-bold text-primary flex items-center justify-center gap-2">
+          <Sparkles className="h-5 w-5" />
           {t('hero.banner')}
-          <Sparkles className="h-4 w-4" />
+          <Sparkles className="h-5 w-5" />
         </p>
       </div>
 
