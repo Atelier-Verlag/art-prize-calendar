@@ -207,20 +207,20 @@ export const mockArtPrizes: ArtPrize[] = [
 
 export function getCategoryColor(category: Category): string {
   const colors: Record<Category, string> = {
-    'Kunstpreis': 'category-kunstpreis',
-    'Wettbewerb': 'category-wettbewerb',
-    'Malerei': 'category-painting',
-    'Skulptur': 'category-sculpture',
-    'Fotografie': 'category-photography',
-    'Mixed Media': 'category-mixed',
-    'Performance': 'category-performance',
-    'Installation': 'category-installation',
-    'Residenz': 'category-residency',
-    'Förderung': 'category-grant',
-    'Stipendium': 'category-grant',
-    'Ausstellung': 'category-exhibition',
-    'Kunst am Bau': 'category-public-art',
-    'Medienkunst': 'category-media',
+    'Kunstpreis': 'bg-amber-600',
+    'Wettbewerb': 'bg-indigo-600',
+    'Malerei': 'bg-rose-600',
+    'Skulptur': 'bg-stone-600',
+    'Fotografie': 'bg-cyan-600',
+    'Mixed Media': 'bg-purple-600',
+    'Performance': 'bg-pink-600',
+    'Installation': 'bg-teal-600',
+    'Residenz': 'bg-emerald-600',
+    'Förderung': 'bg-blue-600',
+    'Stipendium': 'bg-sky-600',
+    'Ausstellung': 'bg-orange-600',
+    'Kunst am Bau': 'bg-lime-700',
+    'Medienkunst': 'bg-violet-600',
   };
   return colors[category];
 }

@@ -32,24 +32,24 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-gold">
-            <Calendar className="h-5 w-5 text-primary" />
+        <a href="/" className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg gradient-gold">
+            <Calendar className="h-6 w-6 text-primary" />
           </div>
-          <span className="font-display text-xl font-semibold tracking-tight">
+          <span className="font-display text-2xl md:text-3xl font-bold tracking-tight">
             Kunstpreis<span className="text-accent">kalender</span>
           </span>
         </a>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-2">
           {navItems.map((item) => (
             <a
               key={item.key}
               href={item.href}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="flex items-center gap-2 px-5 py-2.5 text-base font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className="h-5 w-5" />
               {t(item.key)}
             </a>
           ))}
