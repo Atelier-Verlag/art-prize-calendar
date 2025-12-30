@@ -7,8 +7,8 @@ import { Check, Sparkles } from 'lucide-react';
 
 // Stripe Price IDs
 const PRICE_IDS = {
-  monthly: 'price_1SjMfs2MuRh0bb5poHynGcCg',
-  yearly: 'price_1SjMgf2MuRh0bb5prPE2Ri4w',
+  monthly: 'price_1ShIxw2MuRh0bb5pdNnDGCJv',
+  yearly: 'price_1ShJ302MuRh0bb5pQconexMx',
 };
 
 export function PricingSection() {
