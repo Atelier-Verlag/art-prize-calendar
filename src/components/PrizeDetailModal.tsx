@@ -91,7 +91,7 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
               </div>
               
               {/* Fee warning - prominent */}
-              {prize.fee && (
+              {prize.fee !== null && prize.fee > 0 && (
                 <div className="sm:w-auto bg-destructive/20 rounded-xl p-4 border-2 border-destructive">
                   <div className="flex items-center gap-2 text-sm text-destructive mb-1">
                     <ThumbsDown className="h-4 w-4" />
@@ -110,8 +110,8 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
             {canAccess ? (
               <>
                 {/* Key info grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  {prize.prizeAmount && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {prize.prizeAmount !== null && prize.prizeAmount > 0 && (
                     <div className="bg-accent/10 rounded-lg p-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                         <Banknote className="h-4 w-4" />
@@ -123,17 +123,19 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
                     </div>
                   )}
 
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{t('calendar.region')}</span>
+                  {(prize.region || prize.country) && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                        <MapPin className="h-4 w-4" />
+                        <span>{t('calendar.region')}</span>
+                      </div>
+                      <div className="font-semibold text-foreground">
+                        {[prize.region, prize.country].filter(Boolean).join(', ')}
+                      </div>
                     </div>
-                    <div className="font-semibold text-foreground">
-                      {prize.region}, {prize.country}
-                    </div>
-                  </div>
+                  )}
 
-                  {(prize.ageMin || prize.ageMax) && (
+                  {((prize.ageMin !== null && prize.ageMin > 0) || (prize.ageMax !== null && prize.ageMax > 0)) && (
                     <div className="bg-muted/50 rounded-lg p-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                         <Users className="h-4 w-4" />
@@ -148,8 +150,6 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
                       </div>
                     </div>
                   )}
-
-                  {/* Fee is now shown at the top, removed from grid */}
                 </div>
 
                 <Separator />
@@ -163,17 +163,19 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
                 </div>
 
                 {/* Requirements */}
-                <div>
-                  <h4 className="font-display text-lg font-semibold mb-3">Anforderungen</h4>
-                  <ul className="space-y-2">
-                    {prize.requirements.map((req, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-                        <span className="text-muted-foreground">{req}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {prize.requirements && prize.requirements.length > 0 && (
+                  <div>
+                    <h4 className="font-display text-lg font-semibold mb-3">Anforderungen</h4>
+                    <ul className="space-y-2">
+                      {prize.requirements.map((req, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                          <span className="text-muted-foreground">{req}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <Separator />
 
