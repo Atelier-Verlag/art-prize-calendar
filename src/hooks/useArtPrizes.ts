@@ -9,6 +9,7 @@ export interface ArtPrize {
   category: Category;
   deadline: string;
   prizeAmount: number | null;
+  currency: string;
   region: string;
   country: string;
   ageMin: number | null;
@@ -21,6 +22,28 @@ export interface ArtPrize {
   isArchived: boolean;
 }
 
+// Format amount with currency
+export function formatCurrency(amount: number, currency: string, language: string): string {
+  const currencyCode = currency || 'EUR';
+  
+  if (currencyCode === 'USD') {
+    return new Intl.NumberFormat(language === 'de' ? 'de-DE' : 'en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  }
+  
+  // Default EUR formatting
+  return new Intl.NumberFormat(language === 'de' ? 'de-DE' : 'en-US', {
+    style: 'currency',
+    currency: currencyCode,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 function mapDbPrizeToArtPrize(dbPrize: any): ArtPrize {
   return {
     id: dbPrize.id,
@@ -29,6 +52,7 @@ function mapDbPrizeToArtPrize(dbPrize: any): ArtPrize {
     category: dbPrize.category as Category,
     deadline: dbPrize.deadline,
     prizeAmount: dbPrize.prize_amount,
+    currency: dbPrize.currency || 'EUR',
     region: dbPrize.region,
     country: dbPrize.country,
     ageMin: dbPrize.age_min,

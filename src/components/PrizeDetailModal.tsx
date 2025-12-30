@@ -3,6 +3,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCategoryColor, formatDeadline } from '@/data/mockArtPrizes';
 import type { ArtPrize } from '@/hooks/useArtPrizes';
+import { formatCurrency } from '@/hooks/useArtPrizes';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
   Calendar,
-  Euro,
+  Banknote,
   MapPin,
   Users,
   ThumbsDown,
@@ -111,11 +112,11 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
                   {prize.prizeAmount && (
                     <div className="bg-accent/10 rounded-lg p-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                        <Euro className="h-4 w-4" />
+                        <Banknote className="h-4 w-4" />
                         <span>{t('calendar.prize')}</span>
                       </div>
                       <div className="font-display text-xl font-bold text-accent">
-                        {prize.prizeAmount.toLocaleString(language === 'de' ? 'de-DE' : 'en-US')} €
+                        {formatCurrency(prize.prizeAmount, prize.currency, language)}
                       </div>
                     </div>
                   )}
