@@ -3,9 +3,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCategoryColor, formatDeadline, getDaysUntilDeadline, isDeadlineSoon } from '@/data/mockArtPrizes';
 import type { ArtPrize } from '@/hooks/useArtPrizes';
+import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lock, ThumbsDown, MapPin, Euro, Users, ExternalLink, Calendar } from 'lucide-react';
+import { Lock, ThumbsDown, MapPin, Banknote, Users, ExternalLink, Calendar } from 'lucide-react';
 
 interface CalendarCardProps {
   prize: ArtPrize;
@@ -125,9 +126,9 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
             {/* Prize money */}
             {prize.prizeAmount && (
               <div className="flex items-center gap-2 text-foreground">
-                <Euro className="h-4 w-4 text-accent" />
+                <Banknote className="h-4 w-4 text-accent" />
                 <span className="font-semibold">
-                  {prize.prizeAmount.toLocaleString(language === 'de' ? 'de-DE' : 'en-US')} €
+                  {formatCurrency(prize.prizeAmount, prize.currency, language)}
                 </span>
               </div>
             )}
