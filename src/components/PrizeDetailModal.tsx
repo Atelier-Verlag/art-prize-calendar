@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCategoryColor, formatDeadline } from '@/data/mockArtPrizes';
+import { getCategoryColor, formatDeadline, getDaysUntilDeadline } from '@/data/mockArtPrizes';
 import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import {
@@ -44,7 +44,9 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
   if (!prize) return null;
 
   const categoryClass = getCategoryColor(prize.category);
-  const canAccess = isProUser || prize.isShortTerm;
+  const daysLeft = getDaysUntilDeadline(prize.deadline);
+  const isWithin14Days = daysLeft <= 14;
+  const canAccess = isProUser || isWithin14Days;
 
   const handleUpgrade = () => {
     if (!user) {
@@ -62,7 +64,7 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
           <DialogHeader>
             <div className="flex items-start gap-3">
               <Badge className={`${categoryClass} text-white border-0 shrink-0`}>
-                {t(`category.${prize.category}`)}
+                {prize.category}
               </Badge>
               <DialogTitle className="font-display text-2xl text-left">
                 {canAccess ? prize.name : t('premium.lockedTitle')}
