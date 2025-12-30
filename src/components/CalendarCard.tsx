@@ -23,8 +23,9 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
   const isSoon = isDeadlineSoon(prize.deadline);
   const categoryClass = getCategoryColor(prize.category);
   
-  // Free users can see short-term prizes
-  const canAccess = isProUser || prize.isShortTerm;
+  // Free users can see prizes with deadline within 14 days
+  const isWithin14Days = daysLeft <= 14;
+  const canAccess = isProUser || isWithin14Days;
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,7 +98,7 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
         {/* Category badge and fee warning - always visible */}
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <Badge className={`${categoryClass} text-white border-0 relative z-10`}>
-            {t(`category.${prize.category}`)}
+            {prize.category}
           </Badge>
           
           {/* Fee warning - prominent at top */}

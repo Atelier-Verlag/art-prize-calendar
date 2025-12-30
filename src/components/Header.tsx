@@ -18,9 +18,9 @@ export function Header() {
 
   const navItems = [
     { key: 'nav.calendar', icon: Calendar, href: isOnIndexPage ? '#calendar' : '/#calendar' },
-    { key: 'nav.archive', icon: Archive, href: isOnIndexPage ? '#archive' : '/#archive' },
+    { key: 'nav.archive', icon: Archive, href: '/archiv' },
     { key: 'nav.ai', icon: Sparkles, href: isOnIndexPage ? '#ai' : '/#ai' },
-    { key: 'nav.pricing', icon: CreditCard, href: isOnIndexPage ? '#pricing' : '/#pricing' },
+    { key: 'nav.subscriptions', icon: CreditCard, href: isOnIndexPage ? '#pricing' : '/#pricing' },
   ];
 
   const handleLogout = async () => {
