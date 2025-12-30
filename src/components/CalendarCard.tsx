@@ -102,7 +102,7 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
           </Badge>
           
           {/* Fee warning - prominent at top */}
-          {prize.fee && prize.fee > 0 && (
+          {prize.fee !== null && prize.fee > 0 && (
             <Badge className="bg-destructive border-0 font-bold relative z-10 animate-pulse-soft text-sm px-3 py-1.5 flex items-center gap-1.5">
               <ThumbsDown className="w-6 h-6 text-black fill-black stroke-[2.5]" />
               <span className="text-destructive-foreground">{prize.fee} € Gebühr!</span>
@@ -113,37 +113,41 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
         {/* Content wrapper with blur effect for non-pro */}
         <div className={`${!canAccess ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
           {/* Title */}
-          <h3 className="font-display text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-accent transition-colors">
+          <h3 className="font-display text-base sm:text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-accent transition-colors">
             {prize.name}
           </h3>
 
           {/* Organizer */}
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-4 truncate">
             {prize.organizer}
           </p>
 
           {/* Info grid */}
-          <div className="space-y-2 text-sm">
+          <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
             {/* Prize money */}
             {prize.prizeAmount !== null && prize.prizeAmount > 0 && (
               <div className="flex items-center gap-2 text-foreground">
-                <Banknote className="h-4 w-4 text-accent" />
-                <span className="font-semibold">
+                <Banknote className="h-4 w-4 text-accent shrink-0" />
+                <span className="font-semibold truncate">
                   {formatCurrency(prize.prizeAmount, prize.currency, language)}
                 </span>
               </div>
             )}
 
             {/* Region */}
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <span>{prize.region}, {prize.country}</span>
-            </div>
+            {(prize.region || prize.country) && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {[prize.region, prize.country].filter(Boolean).join(', ')}
+                </span>
+              </div>
+            )}
 
             {/* Age limit */}
-            {(prize.ageMin || prize.ageMax) && (
+            {((prize.ageMin !== null && prize.ageMin > 0) || (prize.ageMax !== null && prize.ageMax > 0)) && (
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4" />
+                <Users className="h-4 w-4 shrink-0" />
                 <span>
                   {prize.ageMin && prize.ageMax
                     ? `${prize.ageMin}-${prize.ageMax} ${language === 'de' ? 'Jahre' : 'years'}`
