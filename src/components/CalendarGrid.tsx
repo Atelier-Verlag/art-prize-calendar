@@ -14,8 +14,9 @@ const awardTypeFilters = [
   { value: 'Kunstpreis', label: 'Kunstpreise' },
   { value: 'Wettbewerb', label: 'Wettbewerbe' },
   { value: 'Stipendium', label: 'Stipendien' },
+  { value: 'Förderung', label: 'Förderung' },
   { value: 'Residenz', label: 'Residencies' },
-  { value: 'Ausstellung', label: 'Ausstellungen' },
+  { value: 'Ausstellung', label: 'Ausstellungsmöglichkeiten' },
   { value: 'Kunst am Bau', label: 'Kunst am Bau' },
 ] as const;
 
