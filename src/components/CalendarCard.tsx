@@ -3,10 +3,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCategoryColor, formatDeadline, getDaysUntilDeadline, isDeadlineSoon } from '@/data/mockArtPrizes';
 import type { ArtPrize } from '@/hooks/useArtPrizes';
-import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lock, ThumbsDown, MapPin, Banknote, Users, ExternalLink, Calendar, Palette, Globe } from 'lucide-react';
+import { Lock, ThumbsDown, MapPin, Gift, Users, ExternalLink, Calendar, Palette, Globe } from 'lucide-react';
 
 interface CalendarCardProps {
   prize: ArtPrize;
@@ -143,12 +142,12 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
 
           {/* Info grid */}
           <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-            {/* Prize money */}
-            {prize.prizeAmount !== null && prize.prizeAmount > 0 && (
-              <div className="flex items-center gap-2 text-foreground">
-                <Banknote className="h-4 w-4 text-accent shrink-0" />
-                <span className="font-semibold truncate">
-                  {formatCurrency(prize.prizeAmount, prize.currency, language)}
+            {/* Benefit details - flexible text-based display */}
+            {prize.benefitDetails && (
+              <div className="flex items-start gap-2 text-foreground">
+                <Gift className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                <span className="font-semibold line-clamp-2">
+                  {prize.benefitDetails}
                 </span>
               </div>
             )}

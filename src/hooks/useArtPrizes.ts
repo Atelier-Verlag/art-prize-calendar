@@ -9,6 +9,7 @@ export interface ArtPrize {
   category: Category;
   deadline: string;
   prizeAmount: number | null;
+  benefitDetails: string | null; // Flexible text-based benefit description
   currency: string;
   region: string;
   country: string;
@@ -44,6 +45,47 @@ export function formatCurrency(amount: number, currency: string, language: strin
   }).format(amount);
 }
 
+
+function generateBenefitDetails(dbPrize: any): string | null {
+  const amount = dbPrize.prize_amount;
+  const currency = dbPrize.currency || 'EUR';
+  const category = dbPrize.category;
+  
+  if (!amount && !['Residenz', 'residency', 'Ausstellung', 'exhibition'].includes(category)) {
+    return null;
+  }
+  
+  // Format currency symbol
+  const currencySymbol = currency === 'EUR' ? '€' : currency === 'CHF' ? 'CHF' : currency === 'USD' ? 'USD' : currency;
+  
+  // Stipendium / Grant: show monthly breakdown
+  if (['Stipendium', 'grant', 'Förderung'].includes(category) && amount) {
+    const monthly = Math.round(amount / 12);
+    return `${monthly.toLocaleString('de-DE')}${currencySymbol === '€' ? '€' : ' ' + currencySymbol} / Monat (12 Monate)`;
+  }
+  
+  // Residency: show duration + benefits
+  if (['Residenz', 'residency'].includes(category)) {
+    if (amount) {
+      const monthly = Math.round(amount / 6);
+      return `${monthly.toLocaleString('de-DE')}${currencySymbol === '€' ? '€' : ' ' + currencySymbol} / Monat + Studio + Unterkunft`;
+    }
+    return 'Studio + Unterkunft';
+  }
+  
+  // Exhibition: show exhibition benefits
+  if (['Ausstellung', 'exhibition'].includes(category)) {
+    return amount ? `Ausstellung + ${amount.toLocaleString('de-DE')} ${currencySymbol}` : 'Katalog + Ausstellung';
+  }
+  
+  // Competition / Prize: show prize breakdown
+  if (amount) {
+    return `Gewinn: ${amount.toLocaleString('de-DE')} ${currencySymbol}`;
+  }
+  
+  return null;
+}
+
 function mapDbPrizeToArtPrize(dbPrize: any): ArtPrize {
   return {
     id: dbPrize.id,
@@ -52,6 +94,7 @@ function mapDbPrizeToArtPrize(dbPrize: any): ArtPrize {
     category: dbPrize.category as Category,
     deadline: dbPrize.deadline,
     prizeAmount: dbPrize.prize_amount,
+    benefitDetails: generateBenefitDetails(dbPrize),
     currency: dbPrize.currency || 'EUR',
     region: dbPrize.region,
     country: dbPrize.country,
