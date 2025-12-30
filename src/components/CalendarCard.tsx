@@ -125,7 +125,7 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
           {/* Info grid */}
           <div className="space-y-2 text-sm">
             {/* Prize money */}
-            {prize.prizeAmount && (
+            {prize.prizeAmount !== null && prize.prizeAmount > 0 && (
               <div className="flex items-center gap-2 text-foreground">
                 <Banknote className="h-4 w-4 text-accent" />
                 <span className="font-semibold">
