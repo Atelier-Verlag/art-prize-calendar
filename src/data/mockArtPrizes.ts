@@ -1,16 +1,18 @@
 export type Category = 
-  | 'painting' 
-  | 'sculpture' 
-  | 'media' 
-  | 'photography' 
-  | 'performance' 
-  | 'mixed' 
-  | 'residency' 
-  | 'grant'
-  | 'exhibition'
-  | 'public_art'
   | 'Kunstpreis'
-  | 'Wettbewerb';
+  | 'Wettbewerb'
+  | 'Malerei'
+  | 'Skulptur'
+  | 'Fotografie'
+  | 'Mixed Media'
+  | 'Performance'
+  | 'Installation'
+  | 'Residenz'
+  | 'Förderung'
+  | 'Stipendium'
+  | 'Ausstellung'
+  | 'Kunst am Bau'
+  | 'Medienkunst';
 
 export interface ArtPrize {
   id: string;
@@ -35,7 +37,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '1',
     name: 'Kunstpreis der Stadt München',
     organizer: 'Kulturreferat München',
-    category: 'painting',
+    category: 'Malerei',
     deadline: '2025-01-15',
     prizeAmount: 15000,
     region: 'Bayern',
@@ -52,7 +54,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '2',
     name: 'International Sculpture Prize Vienna',
     organizer: 'Akademie der bildenden Künste Wien',
-    category: 'sculpture',
+    category: 'Skulptur',
     deadline: '2025-02-28',
     prizeAmount: 25000,
     region: 'International',
@@ -69,7 +71,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '3',
     name: 'Digital Arts Fellowship',
     organizer: 'ZKM Karlsruhe',
-    category: 'media',
+    category: 'Medienkunst',
     deadline: '2025-01-20',
     prizeAmount: null,
     region: 'International',
@@ -86,7 +88,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '4',
     name: 'European Photography Award',
     organizer: 'Fotomuseum Winterthur',
-    category: 'photography',
+    category: 'Fotografie',
     deadline: '2025-03-15',
     prizeAmount: 20000,
     region: 'Europa',
@@ -103,7 +105,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '5',
     name: 'Performance Art Grant Berlin',
     organizer: 'Hebbel am Ufer',
-    category: 'performance',
+    category: 'Performance',
     deadline: '2025-01-10',
     prizeAmount: 8000,
     region: 'International',
@@ -120,7 +122,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '6',
     name: 'Mixed Media Innovation Prize',
     organizer: 'Hamburger Kunsthalle',
-    category: 'mixed',
+    category: 'Mixed Media',
     deadline: '2025-04-01',
     prizeAmount: 12000,
     region: 'Deutschland',
@@ -137,7 +139,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '7',
     name: 'Artist Residency Schloss Solitude',
     organizer: 'Akademie Schloss Solitude',
-    category: 'residency',
+    category: 'Residenz',
     deadline: '2025-02-15',
     prizeAmount: null,
     region: 'International',
@@ -154,7 +156,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '8',
     name: 'Arbeitsstipendium Bildende Kunst',
     organizer: 'Kulturstiftung des Bundes',
-    category: 'grant',
+    category: 'Förderung',
     deadline: '2025-01-31',
     prizeAmount: 24000,
     region: 'Deutschland',
@@ -171,7 +173,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '9',
     name: 'Prix de Rome - Visual Arts',
     organizer: 'Académie de France à Rome',
-    category: 'painting',
+    category: 'Malerei',
     deadline: '2025-05-01',
     prizeAmount: 30000,
     region: 'International',
@@ -188,7 +190,7 @@ export const mockArtPrizes: ArtPrize[] = [
     id: '10',
     name: 'New Media Art Award Korea',
     organizer: 'Nam June Paik Art Center',
-    category: 'media',
+    category: 'Medienkunst',
     deadline: '2025-03-30',
     prizeAmount: 50000,
     region: 'International',
@@ -205,18 +207,20 @@ export const mockArtPrizes: ArtPrize[] = [
 
 export function getCategoryColor(category: Category): string {
   const colors: Record<Category, string> = {
-    painting: 'category-painting',
-    sculpture: 'category-sculpture',
-    media: 'category-media',
-    photography: 'category-photography',
-    performance: 'category-performance',
-    mixed: 'category-mixed',
-    residency: 'category-residency',
-    grant: 'category-grant',
-    exhibition: 'category-exhibition',
-    public_art: 'category-public-art',
-    Kunstpreis: 'category-kunstpreis',
-    Wettbewerb: 'category-wettbewerb',
+    'Kunstpreis': 'category-kunstpreis',
+    'Wettbewerb': 'category-wettbewerb',
+    'Malerei': 'category-painting',
+    'Skulptur': 'category-sculpture',
+    'Fotografie': 'category-photography',
+    'Mixed Media': 'category-mixed',
+    'Performance': 'category-performance',
+    'Installation': 'category-installation',
+    'Residenz': 'category-residency',
+    'Förderung': 'category-grant',
+    'Stipendium': 'category-grant',
+    'Ausstellung': 'category-exhibition',
+    'Kunst am Bau': 'category-public-art',
+    'Medienkunst': 'category-media',
   };
   return colors[category];
 }
