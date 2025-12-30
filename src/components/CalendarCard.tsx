@@ -5,7 +5,7 @@ import { getCategoryColor, formatDeadline, getDaysUntilDeadline, isDeadlineSoon 
 import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lock, ThumbsDown, MapPin, Gift, Users, ExternalLink, Calendar, Palette, Globe } from 'lucide-react';
+import { Lock, ThumbsDown, Users, ExternalLink, Calendar, Palette } from 'lucide-react';
 
 interface CalendarCardProps {
   prize: ArtPrize;
@@ -13,8 +13,55 @@ interface CalendarCardProps {
   onClick: () => void;
 }
 
+// Map region to allowed display values
+function getRegionBadge(region: string, country: string): string {
+  const normalizedRegion = region?.toLowerCase() || '';
+  const normalizedCountry = country?.toLowerCase() || '';
+  
+  if (normalizedRegion.includes('international') || normalizedRegion === 'int') {
+    return 'International';
+  }
+  if (normalizedCountry.includes('schweiz') || normalizedCountry === 'ch' || normalizedCountry.includes('switzerland')) {
+    return 'Schweiz';
+  }
+  if (normalizedCountry.includes('österreich') || normalizedCountry === 'at' || normalizedCountry.includes('austria')) {
+    return 'Österreich';
+  }
+  if (normalizedCountry.includes('deutschland') || normalizedCountry === 'de' || normalizedCountry.includes('germany')) {
+    return 'Deutschland';
+  }
+  // Default to International if unclear
+  return 'International';
+}
+
+// Get discipline/Sparte from category
+function getSparte(category: string): string {
+  const spartenMap: Record<string, string> = {
+    'Malerei': 'Malerei',
+    'Skulptur': 'Skulptur',
+    'Fotografie': 'Fotografie',
+    'Mixed Media': 'Mixed Media',
+    'Performance': 'Performance',
+    'Installation': 'Installation',
+    'Medienkunst': 'Medienkunst',
+    'Keramik': 'Keramik',
+  };
+  return spartenMap[category] || 'Alle Bereiche';
+}
+
+// Check if prize is older than 5 days (based on a hypothetical publish date - using deadline minus 30 days as proxy)
+function isOlderThan5Days(deadline: string): boolean {
+  // For demo purposes, we'll consider entries with deadlines more than 60 days away as "older" entries
+  // In production this should use a proper created_at/published_at field
+  const deadlineDate = new Date(deadline);
+  const today = new Date();
+  const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  // Entries with deadlines > 60 days away are considered "old" for paywall demo
+  return diffDays > 60;
+}
+
 export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { user, startCheckout } = useAuth();
   const navigate = useNavigate();
   
@@ -22,16 +69,15 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
   const isSoon = isDeadlineSoon(prize.deadline);
   const categoryClass = getCategoryColor(prize.category);
   
-  // Free users can see prizes with deadline within 14 days
-  const isWithin14Days = daysLeft <= 14;
-  const canAccess = isProUser || isWithin14Days;
+  // Paywall logic: older than 5 days requires pro membership
+  const isOld = isOlderThan5Days(prize.deadline);
+  const canAccess = isProUser || !isOld;
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
       navigate('/auth');
     } else {
-      // Default to monthly price
       startCheckout('price_1SjMfs2MuRh0bb5poHynGcCg');
     }
   };
@@ -40,6 +86,23 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
     if (canAccess) {
       onClick();
     }
+  };
+
+  const regionBadge = getRegionBadge(prize.region, prize.country);
+  const sparte = getSparte(prize.category);
+
+  // Format age display
+  const getAgeDisplay = () => {
+    if ((prize.ageMin === null || prize.ageMin === 0) && (prize.ageMax === null || prize.ageMax === 0)) {
+      return 'Keine Begrenzung';
+    }
+    if (prize.ageMax && (!prize.ageMin || prize.ageMin === 0)) {
+      return `bis ${prize.ageMax}`;
+    }
+    if (prize.ageMin && (!prize.ageMax || prize.ageMax === 0)) {
+      return `ab ${prize.ageMin}`;
+    }
+    return `${prize.ageMin}-${prize.ageMax}`;
   };
 
   return (
@@ -73,7 +136,7 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
             text-xs font-bold uppercase tracking-wider
             ${isSoon ? 'text-destructive animate-pulse-soft' : 'text-sky-700 dark:text-sky-300'}
           `}>
-            {t('calendar.deadline')}
+            Deadline
           </span>
         </div>
         <div className={`
@@ -87,103 +150,74 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
             text-sm mt-1
             ${isSoon ? 'text-destructive font-semibold' : 'text-sky-700 dark:text-sky-300'}
           `}>
-            {daysLeft} {language === 'de' ? 'Tage' : 'days'}
+            {daysLeft} Tage
           </div>
         )}
       </div>
 
       {/* Content */}
       <div className="p-4 relative">
-        {/* Category badge and fee warning - always visible */}
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <Badge className={`${categoryClass} text-white border-0 relative z-10 text-sm px-3 py-1`}>
-            {prize.category}
-          </Badge>
-          
-          {/* Fee warning - prominent at top */}
-          {prize.fee !== null && prize.fee > 0 && (
-            <Badge className="bg-destructive border-0 font-bold relative z-10 animate-pulse-soft text-sm px-3 py-1.5 flex items-center gap-1.5">
-              <ThumbsDown className="w-6 h-6 text-black fill-black stroke-[2.5]" />
+        {/* Fee warning - always visible */}
+        {prize.fee !== null && prize.fee > 0 && (
+          <div className="mb-3">
+            <Badge className="bg-destructive border-0 font-bold animate-pulse-soft text-sm px-3 py-1.5 flex items-center gap-1.5 w-fit">
+              <ThumbsDown className="w-4 h-4 text-black fill-black stroke-[2.5]" />
               <span className="text-destructive-foreground">{prize.fee} € Gebühr!</span>
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Content wrapper with blur effect for non-pro */}
         <div className={`${!canAccess ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
-          {/* Title */}
-          <h3 className="font-display text-base sm:text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-accent transition-colors">
+          {/* Title - bold at top */}
+          <h3 className="font-display text-base sm:text-lg font-bold text-foreground line-clamp-2 mb-3 group-hover:text-accent transition-colors">
             {prize.name}
           </h3>
 
-          {/* Organizer */}
-          <p className="text-xs sm:text-sm text-muted-foreground mb-4 truncate">
-            {prize.organizer}
-          </p>
-
-          {/* Info badges row */}
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {/* Geographic scope badge */}
-            {prize.region && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5 flex items-center gap-1 bg-muted/50">
-                <Globe className="h-3 w-3" />
-                {prize.region}
-              </Badge>
-            )}
-            
-            {/* Discipline badge - derive from category or show "Alle Sparten" */}
-            <Badge variant="outline" className="text-xs px-2 py-0.5 flex items-center gap-1 bg-muted/50">
-              <Palette className="h-3 w-3" />
-              {['Malerei', 'Skulptur', 'Fotografie', 'Mixed Media', 'Performance', 'Installation', 'Medienkunst'].includes(prize.category) 
-                ? `Sparte: ${prize.category}` 
-                : 'Alle Sparten'}
+          {/* Row 1: Category • Sparte */}
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
+            <Badge className={`${categoryClass} text-white border-0 text-xs px-2 py-0.5`}>
+              {prize.category}
             </Badge>
+            <span className="text-muted-foreground">•</span>
+            <span className="flex items-center gap-1">
+              <Palette className="h-3.5 w-3.5" />
+              Sparte: {sparte}
+            </span>
           </div>
 
-          {/* Info grid */}
-          <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-            {/* Benefit details - flexible text-based display */}
-            {prize.benefitDetails && (
-              <div className="flex items-start gap-2 text-foreground">
-                <Gift className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-                <span className="font-semibold line-clamp-2">
-                  {prize.benefitDetails}
-                </span>
-              </div>
-            )}
-
-            {/* Country */}
-            {prize.country && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-4 w-4 shrink-0" />
-                <span className="truncate">{prize.country}</span>
-              </div>
-            )}
-
-            {/* Age limit */}
-            {((prize.ageMin !== null && prize.ageMin > 0) || (prize.ageMax !== null && prize.ageMax > 0)) && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4 shrink-0" />
-                <span>
-                  {prize.ageMin && prize.ageMax
-                    ? `${prize.ageMin}-${prize.ageMax} ${language === 'de' ? 'Jahre' : 'years'}`
-                    : prize.ageMax
-                    ? `≤ ${prize.ageMax} ${language === 'de' ? 'Jahre' : 'years'}`
-                    : `≥ ${prize.ageMin} ${language === 'de' ? 'Jahre' : 'years'}`}
-                </span>
-              </div>
-            )}
+          {/* Row 2: Age */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <Users className="h-4 w-4 shrink-0" />
+            <span>Alter: {getAgeDisplay()}</span>
           </div>
+
+          {/* Row 3: Benefit/Dotierung - highlighted */}
+          {prize.benefitDetails && (
+            <div className="bg-accent/10 rounded-lg px-3 py-2 mb-3">
+              <span className="font-bold text-foreground text-sm">
+                {prize.benefitDetails}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Lock overlay for non-pro users */}
         {!canAccess && (
-          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-            <div className="bg-background/80 backdrop-blur-sm rounded-full p-4 shadow-lg">
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none bg-background/40">
+            <div className="bg-background/90 backdrop-blur-sm rounded-lg p-4 shadow-lg flex flex-col items-center gap-2">
               <Lock className="h-8 w-8 text-accent" />
+              <span className="text-sm font-semibold text-foreground">Nur für Mitglieder</span>
             </div>
           </div>
         )}
+
+        {/* Region badge - bottom right */}
+        <div className="flex justify-end mt-2">
+          <Badge variant="outline" className="text-xs px-2 py-0.5 bg-muted/50">
+            {regionBadge}
+          </Badge>
+        </div>
       </div>
 
       {/* Footer */}
@@ -194,7 +228,7 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
             className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
-            {t('calendar.details')}
+            Details
           </Button>
         ) : (
           <Button
@@ -202,7 +236,7 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
             onClick={handleUnlock}
           >
             <Lock className="h-4 w-4 mr-2" />
-            {t('premium.unlock')}
+            Freischalten
           </Button>
         )}
       </div>
