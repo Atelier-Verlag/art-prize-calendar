@@ -1,37 +1,44 @@
+// Editorial categories only (NOT disciplines/Sparten)
 export type Category = 
   | 'Kunstpreis'
   | 'Wettbewerb'
+  | 'Stipendium'
+  | 'Förderung'
+  | 'Residenz'
+  | 'Ausstellung'
+  | 'Kunst am Bau';
+
+// Discipline/Sparte type
+export type Sparte = 
   | 'Malerei'
   | 'Skulptur'
   | 'Fotografie'
   | 'Mixed Media'
   | 'Performance'
   | 'Installation'
-  | 'Residenz'
-  | 'Förderung'
-  | 'Stipendium'
-  | 'Ausstellung'
-  | 'Kunst am Bau'
   | 'Medienkunst'
-  | 'Keramik';
+  | 'Keramik'
+  | 'Grafik'
+  | 'Alle Bereiche';
 
 export interface ArtPrize {
   id: string;
   name: string;
   organizer: string;
   category: Category;
+  sparte: Sparte; // Discipline field
   deadline: string;
   prizeAmount: number | null;
-  benefitDetails: string | null; // Flexible text-based benefit description
-  region: string;
-  country: string;
+  benefitDetails: string; // REQUIRED - never empty
+  region: string; // Detail region (NRW, Bayern, etc.)
+  country: string; // Deutschland, Österreich, Schweiz, International
   ageMin: number | null;
   ageMax: number | null;
   fee: number | null;
   description: string;
   requirements: string[];
   website: string;
-  isShortTerm: boolean; // Within 2 weeks = free access
+  isShortTerm: boolean;
 }
 
 // Calculate dates relative to today for testing
@@ -44,12 +51,13 @@ const in90Days = new Date(today);
 in90Days.setDate(today.getDate() + 90);
 
 export const mockArtPrizes: ArtPrize[] = [
-  // Example 1: Concours international de céramique (NEW - within 5 days)
+  // Example 1: Concours international de céramique (NEW)
   {
     id: '1',
     name: 'Concours international de céramique',
     organizer: 'Ville de Carouge',
     category: 'Wettbewerb',
+    sparte: 'Keramik',
     deadline: in14Days.toISOString().split('T')[0],
     prizeAmount: 10000,
     benefitDetails: '10.000 CHF',
@@ -63,16 +71,17 @@ export const mockArtPrizes: ArtPrize[] = [
     website: 'https://carouge.ch/biennale',
     isShortTerm: true,
   },
-  // Example 2: Perspektive Bildende Kunst (NEW - within 5 days)
+  // Example 2: Perspektive Bildende Kunst (NEW)
   {
     id: '2',
     name: 'Perspektive Bildende Kunst',
     organizer: 'Kulturstiftung des Bundes',
     category: 'Förderung',
+    sparte: 'Alle Bereiche',
     deadline: in30Days.toISOString().split('T')[0],
     prizeAmount: 5000,
     benefitDetails: '5.000 €',
-    region: 'Deutschland',
+    region: 'NRW',
     country: 'Deutschland',
     ageMin: null,
     ageMax: 40,
@@ -82,13 +91,14 @@ export const mockArtPrizes: ArtPrize[] = [
     website: 'https://kulturstiftung-des-bundes.de',
     isShortTerm: true,
   },
-  // Example 3: Internationaler Schneeskulpturen-Wettbewerb (LOCKED - older than 5 days)
+  // Example 3: Internationaler Schneeskulpturen-Wettbewerb (LOCKED)
   {
     id: '3',
     name: 'Internationaler Schneeskulpturen-Wettbewerb',
     organizer: 'Stadt Grindelwald',
     category: 'Wettbewerb',
-    deadline: in90Days.toISOString().split('T')[0], // Far deadline = treated as "old" entry
+    sparte: 'Skulptur',
+    deadline: in90Days.toISOString().split('T')[0],
     prizeAmount: null,
     benefitDetails: 'Versch. Preisgelder',
     region: 'International',
@@ -101,16 +111,17 @@ export const mockArtPrizes: ArtPrize[] = [
     website: 'https://grindelwald.ch/skulpturen',
     isShortTerm: false,
   },
-  // Additional entries for variety
+  // Additional entries
   {
     id: '4',
     name: 'Kunstpreis der Stadt München',
     organizer: 'Kulturreferat München',
     category: 'Kunstpreis',
+    sparte: 'Alle Bereiche',
     deadline: in14Days.toISOString().split('T')[0],
     prizeAmount: 15000,
     benefitDetails: '1. Preis: 15.000 €',
-    region: 'Deutschland',
+    region: 'Bayern',
     country: 'Deutschland',
     ageMin: 18,
     ageMax: 40,
@@ -125,10 +136,11 @@ export const mockArtPrizes: ArtPrize[] = [
     name: 'Artist Residency Schloss Solitude',
     organizer: 'Akademie Schloss Solitude',
     category: 'Residenz',
+    sparte: 'Alle Bereiche',
     deadline: in30Days.toISOString().split('T')[0],
     prizeAmount: null,
     benefitDetails: '1.200 € / Monat + Studio + Unterkunft',
-    region: 'International',
+    region: 'Baden-Württemberg',
     country: 'Deutschland',
     ageMin: null,
     ageMax: 35,
@@ -143,10 +155,11 @@ export const mockArtPrizes: ArtPrize[] = [
     name: 'Arbeitsstipendium Bildende Kunst',
     organizer: 'Stiftung Kunstfonds',
     category: 'Stipendium',
+    sparte: 'Malerei',
     deadline: in30Days.toISOString().split('T')[0],
     prizeAmount: 24000,
     benefitDetails: '2.000 € / Monat (12 Monate)',
-    region: 'Deutschland',
+    region: 'International',
     country: 'Deutschland',
     ageMin: null,
     ageMax: null,
@@ -161,10 +174,11 @@ export const mockArtPrizes: ArtPrize[] = [
     name: 'Gruppenausstellung Junge Kunst',
     organizer: 'Kunstverein Frankfurt',
     category: 'Ausstellung',
+    sparte: 'Mixed Media',
     deadline: in14Days.toISOString().split('T')[0],
     prizeAmount: null,
-    benefitDetails: 'Katalog + Vernissage',
-    region: 'Deutschland',
+    benefitDetails: 'Ausstellung + Katalog',
+    region: 'Hessen',
     country: 'Deutschland',
     ageMin: 18,
     ageMax: 35,
@@ -179,10 +193,11 @@ export const mockArtPrizes: ArtPrize[] = [
     name: 'Kunst am Bau Wettbewerb Berlin',
     organizer: 'Senatsverwaltung Berlin',
     category: 'Kunst am Bau',
+    sparte: 'Skulptur',
     deadline: in30Days.toISOString().split('T')[0],
     prizeAmount: 50000,
     benefitDetails: 'Auftragssumme: 50.000 €',
-    region: 'Deutschland',
+    region: 'Berlin',
     country: 'Deutschland',
     ageMin: null,
     ageMax: null,
@@ -194,25 +209,36 @@ export const mockArtPrizes: ArtPrize[] = [
   },
 ];
 
+// Color system for CATEGORY badges and filters
 export function getCategoryColor(category: Category): string {
   const colors: Record<Category, string> = {
-    'Kunstpreis': 'bg-amber-600',
-    'Wettbewerb': 'bg-indigo-600',
-    'Malerei': 'bg-rose-600',
-    'Skulptur': 'bg-stone-600',
-    'Fotografie': 'bg-cyan-600',
-    'Mixed Media': 'bg-purple-600',
-    'Performance': 'bg-pink-600',
-    'Installation': 'bg-teal-600',
-    'Residenz': 'bg-emerald-600',
-    'Förderung': 'bg-blue-600',
-    'Stipendium': 'bg-sky-600',
-    'Ausstellung': 'bg-orange-600',
-    'Kunst am Bau': 'bg-lime-700',
-    'Medienkunst': 'bg-violet-600',
-    'Keramik': 'bg-amber-700',
+    'Förderung': 'bg-blue-100 text-blue-800',
+    'Residenz': 'bg-green-100 text-green-800',
+    'Wettbewerb': 'bg-orange-100 text-orange-800',
+    'Kunstpreis': 'bg-yellow-100 text-yellow-800',
+    'Stipendium': 'bg-purple-100 text-purple-800',
+    'Ausstellung': 'bg-black text-white',
+    'Kunst am Bau': 'bg-gray-100 text-gray-800',
   };
-  return colors[category];
+  return colors[category] || 'bg-gray-100 text-gray-800';
+}
+
+// Active filter button colors
+export function getCategoryFilterColor(category: Category | 'all', isActive: boolean): string {
+  if (!isActive) return '';
+  
+  if (category === 'all') return 'bg-primary text-primary-foreground';
+  
+  const colors: Record<Category, string> = {
+    'Förderung': 'bg-blue-600 text-white hover:bg-blue-700',
+    'Residenz': 'bg-green-600 text-white hover:bg-green-700',
+    'Wettbewerb': 'bg-orange-500 text-white hover:bg-orange-600',
+    'Kunstpreis': 'bg-yellow-500 text-yellow-900 hover:bg-yellow-600',
+    'Stipendium': 'bg-purple-600 text-white hover:bg-purple-700',
+    'Ausstellung': 'bg-black text-white hover:bg-gray-800',
+    'Kunst am Bau': 'bg-gray-600 text-white hover:bg-gray-700',
+  };
+  return colors[category] || 'bg-gray-600 text-white';
 }
 
 export function isDeadlineSoon(deadline: string): boolean {

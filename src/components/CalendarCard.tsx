@@ -5,7 +5,7 @@ import { getCategoryColor, formatDeadline, getDaysUntilDeadline, isDeadlineSoon 
 import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lock, ThumbsDown, Users, ExternalLink, Calendar, Palette } from 'lucide-react';
+import { Lock, ThumbsDown, ExternalLink, Calendar } from 'lucide-react';
 
 interface CalendarCardProps {
   prize: ArtPrize;
@@ -13,14 +13,10 @@ interface CalendarCardProps {
   onClick: () => void;
 }
 
-// Map region to allowed display values
-function getRegionBadge(region: string, country: string): string {
-  const normalizedRegion = region?.toLowerCase() || '';
+// Map country to allowed display values
+function getCountryBadge(country: string): string {
   const normalizedCountry = country?.toLowerCase() || '';
   
-  if (normalizedRegion.includes('international') || normalizedRegion === 'int') {
-    return 'International';
-  }
   if (normalizedCountry.includes('schweiz') || normalizedCountry === 'ch' || normalizedCountry.includes('switzerland')) {
     return 'Schweiz';
   }
@@ -30,33 +26,14 @@ function getRegionBadge(region: string, country: string): string {
   if (normalizedCountry.includes('deutschland') || normalizedCountry === 'de' || normalizedCountry.includes('germany')) {
     return 'Deutschland';
   }
-  // Default to International if unclear
   return 'International';
 }
 
-// Get discipline/Sparte from category
-function getSparte(category: string): string {
-  const spartenMap: Record<string, string> = {
-    'Malerei': 'Malerei',
-    'Skulptur': 'Skulptur',
-    'Fotografie': 'Fotografie',
-    'Mixed Media': 'Mixed Media',
-    'Performance': 'Performance',
-    'Installation': 'Installation',
-    'Medienkunst': 'Medienkunst',
-    'Keramik': 'Keramik',
-  };
-  return spartenMap[category] || 'Alle Bereiche';
-}
-
-// Check if prize is older than 5 days (based on a hypothetical publish date - using deadline minus 30 days as proxy)
+// Check if prize is older than 5 days (using deadline > 60 days as proxy)
 function isOlderThan5Days(deadline: string): boolean {
-  // For demo purposes, we'll consider entries with deadlines more than 60 days away as "older" entries
-  // In production this should use a proper created_at/published_at field
   const deadlineDate = new Date(deadline);
   const today = new Date();
   const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  // Entries with deadlines > 60 days away are considered "old" for paywall demo
   return diffDays > 60;
 }
 
@@ -67,9 +44,9 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
   
   const daysLeft = getDaysUntilDeadline(prize.deadline);
   const isSoon = isDeadlineSoon(prize.deadline);
-  const categoryClass = getCategoryColor(prize.category);
+  const categoryColorClass = getCategoryColor(prize.category);
   
-  // Paywall logic: older than 5 days requires pro membership
+  // Paywall logic
   const isOld = isOlderThan5Days(prize.deadline);
   const canAccess = isProUser || !isOld;
 
@@ -88,8 +65,7 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
     }
   };
 
-  const regionBadge = getRegionBadge(prize.region, prize.country);
-  const sparte = getSparte(prize.category);
+  const countryBadge = getCountryBadge(prize.country);
 
   // Format age display
   const getAgeDisplay = () => {
@@ -169,37 +145,50 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
 
         {/* Content wrapper with blur effect for non-pro */}
         <div className={`${!canAccess ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
-          {/* Title - bold at top */}
+          
+          {/* TOP ROW: Category Badge */}
+          <div className="mb-3">
+            <Badge className={`${categoryColorClass} border-0 text-xs font-semibold px-2.5 py-1`}>
+              {prize.category}
+            </Badge>
+          </div>
+
+          {/* TITLE */}
           <h3 className="font-display text-base sm:text-lg font-bold text-foreground line-clamp-2 mb-3 group-hover:text-accent transition-colors">
             {prize.name}
           </h3>
 
-          {/* Row 1: Category • Sparte */}
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
-            <Badge className={`${categoryClass} text-white border-0 text-xs px-2 py-0.5`}>
-              {prize.category}
-            </Badge>
-            <span className="text-muted-foreground">•</span>
-            <span className="flex items-center gap-1">
-              <Palette className="h-3.5 w-3.5" />
-              Sparte: {sparte}
+          {/* META BLOCK */}
+          <div className="space-y-1.5 text-sm text-muted-foreground mb-4">
+            {/* Line 1: Sparte */}
+            <div>
+              Sparte: <span className="text-foreground">{prize.sparte || 'Alle Bereiche'}</span>
+            </div>
+            
+            {/* Line 2: Alter */}
+            <div>
+              Alter: <span className="text-foreground">{getAgeDisplay()}</span>
+            </div>
+            
+            {/* Line 3: Region Detail */}
+            <div>
+              Region: <span className="text-foreground">{prize.region || 'International'}</span>
+            </div>
+          </div>
+
+          {/* HIGHLIGHT: Dotierung/Leistung (REQUIRED) */}
+          <div className="bg-accent/10 rounded-lg px-3 py-2.5 mb-4">
+            <span className="font-bold text-foreground">
+              {prize.benefitDetails || 'Auf Anfrage'}
             </span>
           </div>
 
-          {/* Row 2: Age */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-            <Users className="h-4 w-4 shrink-0" />
-            <span>Alter: {getAgeDisplay()}</span>
+          {/* FOOTER: Country Badge - bottom left */}
+          <div className="flex justify-start">
+            <Badge variant="outline" className="text-xs px-2.5 py-1 bg-muted/50 font-medium">
+              {countryBadge}
+            </Badge>
           </div>
-
-          {/* Row 3: Benefit/Dotierung - highlighted */}
-          {prize.benefitDetails && (
-            <div className="bg-accent/10 rounded-lg px-3 py-2 mb-3">
-              <span className="font-bold text-foreground text-sm">
-                {prize.benefitDetails}
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Lock overlay for non-pro users */}
@@ -211,16 +200,9 @@ export function CalendarCard({ prize, isProUser, onClick }: CalendarCardProps) {
             </div>
           </div>
         )}
-
-        {/* Region badge - bottom right */}
-        <div className="flex justify-end mt-2">
-          <Badge variant="outline" className="text-xs px-2 py-0.5 bg-muted/50">
-            {regionBadge}
-          </Badge>
-        </div>
       </div>
 
-      {/* Footer */}
+      {/* Action Footer */}
       <div className="px-4 pb-4">
         {canAccess ? (
           <Button
