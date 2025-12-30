@@ -197,6 +197,17 @@ export type Database = {
         | "public_art"
         | "Kunstpreis"
         | "Wettbewerb"
+        | "Malerei"
+        | "Skulptur"
+        | "Fotografie"
+        | "Mixed Media"
+        | "Installation"
+        | "Residenz"
+        | "Förderung"
+        | "Stipendium"
+        | "Ausstellung"
+        | "Kunst am Bau"
+        | "Medienkunst"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -337,6 +348,17 @@ export const Constants = {
         "public_art",
         "Kunstpreis",
         "Wettbewerb",
+        "Malerei",
+        "Skulptur",
+        "Fotografie",
+        "Mixed Media",
+        "Installation",
+        "Residenz",
+        "Förderung",
+        "Stipendium",
+        "Ausstellung",
+        "Kunst am Bau",
+        "Medienkunst",
       ],
     },
   },
