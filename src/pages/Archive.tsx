@@ -54,7 +54,7 @@ export default function Archive() {
                   <CalendarCard
                     prize={prize}
                     isProUser={isProUser}
-                    onClick={() => setSelectedPrize(prize)}
+                    onDetailsClick={() => setSelectedPrize(prize)}
                   />
                 </div>
               ))}

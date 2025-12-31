@@ -22,6 +22,7 @@ export interface ArtPrize {
   website: string;
   isShortTerm: boolean;
   isArchived: boolean;
+  created_at: string;
 }
 
 // Format amount with currency
@@ -150,6 +151,7 @@ function mapDbPrizeToArtPrize(dbPrize: any): ArtPrize {
     website: dbPrize.website,
     isShortTerm: dbPrize.is_short_term,
     isArchived: dbPrize.is_archived,
+    created_at: dbPrize.created_at,
   };
 }
 
