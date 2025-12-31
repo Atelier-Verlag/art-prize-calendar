@@ -102,21 +102,33 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
     return `${prize.ageMin}-${prize.ageMax}`;
   };
 
+  // Determine header bar color based on deadline
+  const headerBarColorClass = isDeadlineUrgent 
+    ? 'bg-destructive' 
+    : 'bg-primary';
+
   return (
     <div
       className={`
         relative group
         bg-card rounded-xl overflow-hidden
-        shadow-[0_8px_30px_rgba(0,0,0,0.12),0_4px_10px_rgba(0,0,0,0.06)]
+        shadow-[0_4px_20px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]
+        hover:shadow-[0_8px_30px_rgba(0,0,0,0.12),0_4px_10px_rgba(0,0,0,0.06)]
         transition-all duration-300 ease-out
         ${!canAccess ? 'opacity-90' : ''}
       `}
     >
-      {/* Calendar tear effect top */}
-      <div className="h-3 bg-muted border-b border-border flex items-end justify-center gap-1 md:gap-1.5 pb-0.5">
-        {[...Array(12)].map((_, i) => (
-          <div key={i} className="w-1.5 md:w-2 h-1.5 md:h-2 rounded-full bg-border" />
-        ))}
+      {/* COLORED HEADER BAR */}
+      <div className={`${headerBarColorClass} px-3 md:px-4 py-2 md:py-2.5 flex items-center justify-between`}>
+        <span className="text-white text-xs md:text-sm font-semibold">
+          {prize.category}
+        </span>
+        <div className="text-white text-right">
+          <span className="text-[10px] md:text-xs opacity-80 block leading-tight">Deadline</span>
+          <span className="text-xs md:text-sm font-bold leading-tight">
+            {format(deadlineDate, 'dd.MM.yyyy', { locale: de })}
+          </span>
+        </div>
       </div>
 
       {/* Content */}
@@ -133,16 +145,6 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
 
         {/* Content wrapper with blur effect for non-pro */}
         <div className={`${!canAccess ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
-          
-          {/* TOP ROW: Category Badge + Published Date */}
-          <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
-            <Badge className={`${categoryColorClass} border-0 text-xs font-semibold px-2 md:px-2.5 py-0.5 md:py-1`}>
-              {prize.category}
-            </Badge>
-            <span className="text-xs text-muted-foreground">
-              {format(new Date(prize.created_at || new Date()), 'dd.MM.yyyy', { locale: de })}
-            </span>
-          </div>
 
           {/* TITLE */}
           <h3 className="font-display text-base md:text-lg font-bold text-foreground line-clamp-2 mb-3">
@@ -161,16 +163,7 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
               Alter: <span className="text-foreground">{getAgeDisplay()}</span>
             </div>
             
-            {/* Line 3: Bewerbung bis (Deadline) */}
-            <div className={`flex items-center gap-1 ${isDeadlineUrgent ? 'text-destructive font-semibold' : ''}`}>
-              <Calendar className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
-              <span>Bewerbung bis:</span>
-              <span className={isDeadlineUrgent ? 'text-destructive' : 'text-foreground'}>
-                {format(deadlineDate, 'dd.MM.yyyy', { locale: de })}
-              </span>
-            </div>
-            
-            {/* Line 4: Örtliche Begrenzung */}
+            {/* Line 3: Örtliche Begrenzung */}
             <div className="truncate">
               Örtliche Begrenzung: <span className="text-foreground">{localRestriction}</span>
             </div>

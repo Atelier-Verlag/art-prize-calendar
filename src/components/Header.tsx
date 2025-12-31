@@ -36,9 +36,14 @@ export function Header() {
           <div className="flex h-11 w-11 items-center justify-center rounded-lg gradient-gold">
             <Calendar className="h-6 w-6 text-primary" />
           </div>
-          <span className="font-display text-2xl md:text-3xl font-bold tracking-tight">
-            Kunstpreis<span className="text-accent">kalender</span>
-          </span>
+          <div className="flex flex-col">
+            <span className="font-display text-2xl md:text-3xl font-bold tracking-tight leading-tight">
+              Kunstpreis<span className="text-accent">kalender</span>
+            </span>
+            <span className="text-[10px] md:text-xs text-muted-foreground leading-tight">
+              Powered by Zeitschrift Atelier
+            </span>
+          </div>
         </a>
 
         {/* Desktop Navigation */}
