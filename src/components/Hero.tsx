@@ -49,7 +49,7 @@ export function Hero() {
 
           {/* Subtitle */}
           <p className="mt-8 text-base text-muted-foreground md:text-lg max-w-2xl mx-auto animate-fade-in-up delay-100 opacity-0">
-            {t('hero.subtitle')} — umfassend und laufend aktualisiert.
+            {t('hero.subtitle')} — {t('hero.subtitleSuffix')}
           </p>
         </div>
       </div>
