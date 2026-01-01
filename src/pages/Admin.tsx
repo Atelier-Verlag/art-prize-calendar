@@ -62,7 +62,7 @@ export default function Admin() {
   // NOTE: We intentionally do NOT redirect here so the UI stays accessible for debugging.
 
 
-  // Load existing content - fetch each key separately to ensure correct mapping
+  // Load existing content - always load for viewing, saving requires admin
   useEffect(() => {
     const loadContent = async () => {
       try {
@@ -100,13 +100,8 @@ export default function Admin() {
       }
     };
 
-    if (!canUseBackend) {
-      setLoadingContent(false);
-      return;
-    }
-
     loadContent();
-  }, [canUseBackend]);
+  }, []);
 
   // Load scraper logs
   const loadScraperLogs = async () => {
