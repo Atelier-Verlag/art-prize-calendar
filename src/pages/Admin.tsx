@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -58,45 +57,51 @@ export default function Admin() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [addingSource, setAddingSource] = useState(false);
 
-  // Redirect non-admins
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate('/');
-    }
-  }, [user, isAdmin, loading, navigate]);
+  const canUseBackend = !!user && isAdmin;
+
+  // NOTE: We intentionally do NOT redirect here so the UI stays accessible for debugging.
+
 
   // Load existing content
   useEffect(() => {
     const loadContent = async () => {
-      const { data, error } = await supabase
-        .from('site_content' as any)
-        .select('key, content');
-      
-      if (error) {
-        console.error('Error loading content:', error);
-        return;
+      try {
+        const { data, error } = await supabase
+          .from('site_content' as any)
+          .select('key, content');
+
+        if (error) {
+          console.error('Error loading content:', error);
+          return;
+        }
+
+        if (data) {
+          const contentMap: Record<ContentKey, string> = {
+            impressum: '',
+            datenschutz: '',
+            disclaimer: '',
+          };
+          (data as any[]).forEach((item: { key: string; content: string }) => {
+            if (item.key in contentMap) {
+              contentMap[item.key as ContentKey] = item.content || '';
+            }
+          });
+          setContents(contentMap);
+        }
+      } catch (err) {
+        console.error('Error loading content:', err);
+      } finally {
+        setLoadingContent(false);
       }
-      
-      if (data) {
-        const contentMap: Record<ContentKey, string> = {
-          impressum: '',
-          datenschutz: '',
-          disclaimer: '',
-        };
-        (data as any[]).forEach((item: { key: string; content: string }) => {
-          if (item.key in contentMap) {
-            contentMap[item.key as ContentKey] = item.content || '';
-          }
-        });
-        setContents(contentMap);
-      }
-      setLoadingContent(false);
     };
-    
-    if (user && isAdmin) {
-      loadContent();
+
+    if (!canUseBackend) {
+      setLoadingContent(false);
+      return;
     }
-  }, [user, isAdmin]);
+
+    loadContent();
+  }, [canUseBackend]);
 
   // Load scraper logs
   const loadScraperLogs = async () => {
@@ -132,11 +137,15 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    if (user && isAdmin) {
-      loadScraperLogs();
-      loadScraperSources();
+    if (!canUseBackend) {
+      setLoadingLogs(false);
+      setLoadingSources(false);
+      return;
     }
-  }, [user, isAdmin]);
+
+    loadScraperLogs();
+    loadScraperSources();
+  }, [canUseBackend]);
 
   const handleSave = async (key: ContentKey) => {
     setSaving(true);
@@ -202,8 +211,31 @@ export default function Admin() {
       return;
     }
 
+    // If backend access is blocked (not logged in / not admin), still allow UI testing locally.
+    if (!canUseBackend) {
+      const id = crypto.randomUUID();
+      setScraperSources((prev) => [
+        {
+          id,
+          created_at: new Date().toISOString(),
+          name: newSourceName.trim(),
+          url: newSourceUrl.trim(),
+          active: true,
+        },
+        ...prev,
+      ]);
+      setNewSourceName('');
+      setNewSourceUrl('');
+      setLoadingSources(false);
+      toast({
+        title: 'Nur lokal gespeichert',
+        description: 'Du bist nicht eingeloggt – die Quelle wurde nur im UI hinzugefügt.',
+      });
+      return;
+    }
+
     setAddingSource(true);
-    
+
     const { error } = await supabase
       .from('scraper_sources' as any)
       .insert({
@@ -228,7 +260,7 @@ export default function Admin() {
       setNewSourceUrl('');
       await loadScraperSources();
     }
-    
+
     setAddingSource(false);
   };
 
@@ -304,16 +336,12 @@ export default function Admin() {
     }
   };
 
-  if (loading || loadingContent) {
+  if (loadingContent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
-  }
-
-  if (!isAdmin) {
-    return null;
   }
 
   const contentSections: { key: ContentKey; title: string; description: string }[] = [
@@ -331,7 +359,7 @@ export default function Admin() {
 
       <div className="min-h-screen bg-background">
         <Header />
-        
+
         <main className="container py-16 md:py-24">
           <div className="max-w-4xl mx-auto">
             <Button
@@ -351,9 +379,14 @@ export default function Admin() {
                 <h1 className="font-display text-3xl font-bold text-foreground">
                   Admin-Bereich
                 </h1>
-                <p className="text-muted-foreground">
-                  Verwalten Sie die Inhalte Ihrer Website
-                </p>
+                 <p className="text-muted-foreground">
+                   Verwalten Sie die Inhalte Ihrer Website
+                 </p>
+                 {!canUseBackend && (
+                   <p className="text-sm text-destructive mt-1">
+                     Debug-Ansicht: Nicht eingeloggt – Backend-Aktionen können fehlschlagen.
+                   </p>
+                 )}
               </div>
             </div>
 
@@ -595,9 +628,8 @@ export default function Admin() {
             </Tabs>
           </div>
         </main>
-
-        <Footer />
       </div>
+
     </>
   );
 }
