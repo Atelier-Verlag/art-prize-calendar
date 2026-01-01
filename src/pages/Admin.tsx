@@ -62,32 +62,37 @@ export default function Admin() {
   // NOTE: We intentionally do NOT redirect here so the UI stays accessible for debugging.
 
 
-  // Load existing content
+  // Load existing content - fetch each key separately to ensure correct mapping
   useEffect(() => {
     const loadContent = async () => {
       try {
-        const { data, error } = await supabase
-          .from('site_content' as any)
-          .select('key, content');
+        const contentMap: Record<ContentKey, string> = {
+          impressum: '',
+          datenschutz: '',
+          disclaimer: '',
+        };
 
-        if (error) {
-          console.error('Error loading content:', error);
-          return;
+        // Fetch each content key separately to ensure correct mapping
+        for (const key of ['impressum', 'datenschutz', 'disclaimer'] as ContentKey[]) {
+          const { data, error } = await supabase
+            .from('site_content' as any)
+            .select('content')
+            .eq('key', key)
+            .maybeSingle();
+
+          if (error) {
+            console.error(`Error loading ${key}:`, error);
+            continue;
+          }
+
+          if (data && (data as any).content) {
+            contentMap[key] = (data as any).content;
+            console.log(`Loaded ${key}:`, contentMap[key].substring(0, 50) + '...');
+          }
         }
 
-        if (data) {
-          const contentMap: Record<ContentKey, string> = {
-            impressum: '',
-            datenschutz: '',
-            disclaimer: '',
-          };
-          (data as any[]).forEach((item: { key: string; content: string }) => {
-            if (item.key in contentMap) {
-              contentMap[item.key as ContentKey] = item.content || '';
-            }
-          });
-          setContents(contentMap);
-        }
+        setContents(contentMap);
+        console.log('All content loaded:', Object.keys(contentMap).map(k => `${k}: ${contentMap[k as ContentKey].substring(0, 30)}...`));
       } catch (err) {
         console.error('Error loading content:', err);
       } finally {
