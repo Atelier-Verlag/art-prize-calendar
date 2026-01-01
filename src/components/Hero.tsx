@@ -1,6 +1,5 @@
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export function Hero() {
   const { t } = useLanguage();
@@ -22,24 +21,35 @@ export function Hero() {
         </p>
       </div>
 
-      {/* Hero content */}
+      {/* Hero content - 3 line title design */}
       <div className="container py-16 md:py-24 lg:py-32">
         <div className="mx-auto max-w-4xl text-center">
-          {/* Title */}
-          <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up">
-            {t('hero.title.part1')}
-            <span className="relative inline-block">
-              <span className="relative z-10 bg-gradient-to-r from-accent to-[hsl(45,85%,65%)] bg-clip-text text-transparent">
-                {t('hero.title.highlight')}
+          {/* Title - 3 Lines */}
+          <div className="animate-fade-in-up">
+            {/* Line 1 - Small */}
+            <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground font-medium mb-2">
+              {t('hero.title.part1')}
+            </p>
+            
+            {/* Line 2 - Main/Large */}
+            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-3">
+              <span className="relative inline-block">
+                <span className="relative z-10 bg-gradient-to-r from-accent to-[hsl(45,85%,65%)] bg-clip-text text-transparent">
+                  {t('hero.title.highlight')}
+                </span>
+                <span className="absolute -bottom-2 left-0 right-0 h-3 bg-accent/20 -rotate-1 rounded" />
               </span>
-              <span className="absolute -bottom-2 left-0 right-0 h-3 bg-accent/20 -rotate-1 rounded" />
-            </span>
-            {t('hero.title.part2')}
-          </h1>
+            </h1>
+            
+            {/* Line 3 - Small */}
+            <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground font-medium">
+              {t('hero.title.part2')}
+            </p>
+          </div>
 
           {/* Subtitle */}
-          <p className="mt-6 text-lg text-muted-foreground md:text-xl lg:text-2xl max-w-3xl mx-auto animate-fade-in-up delay-100 opacity-0">
-            Der Kalender für Kunstausschreibungen für KünstlerInnen und Künstler – sorgfältig kuratiert, aktuell und laufend aktualisiert.
+          <p className="mt-8 text-base text-muted-foreground md:text-lg max-w-2xl mx-auto animate-fade-in-up delay-100 opacity-0">
+            {t('hero.subtitle')}
           </p>
         </div>
       </div>

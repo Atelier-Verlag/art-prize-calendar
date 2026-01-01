@@ -65,7 +65,7 @@ export const translations: Translations = {
   'hero.cta.secondary': { de: 'Mehr erfahren', en: 'Learn more', fr: 'En savoir plus', es: 'Saber más', ko: '더 알아보기' },
 
   // Calendar
-  'calendar.deadline': { de: 'FRIST', en: 'DEADLINE', fr: 'DATE LIMITE', es: 'FECHA LÍMITE', ko: '마감일' },
+  'calendar.deadline': { de: 'Deadline', en: 'Deadline', fr: 'Date limite', es: 'Fecha límite', ko: '마감일' },
   'calendar.prize': { de: 'Preisgeld', en: 'Prize money', fr: 'Prix', es: 'Premio', ko: '상금' },
   'calendar.region': { de: 'Region', en: 'Region', fr: 'Région', es: 'Región', ko: '지역' },
   'calendar.age': { de: 'Alter', en: 'Age', fr: 'Âge', es: 'Edad', ko: '연령' },
@@ -74,8 +74,28 @@ export const translations: Translations = {
   'calendar.locked': { de: 'Pro-Zugang erforderlich', en: 'Pro access required', fr: 'Accès Pro requis', es: 'Acceso Pro requerido', ko: 'Pro 액세스 필요' },
   'calendar.filter': { de: 'Filter', en: 'Filter', fr: 'Filtrer', es: 'Filtrar', ko: '필터' },
   'calendar.all': { de: 'Alle', en: 'All', fr: 'Tous', es: 'Todos', ko: '전체' },
+  'calendar.sparte': { de: 'Sparte', en: 'Discipline', fr: 'Discipline', es: 'Disciplina', ko: '분야' },
+  'calendar.requirement': { de: 'Voraussetzung', en: 'Requirement', fr: 'Condition', es: 'Requisito', ko: '요구사항' },
+  'calendar.prizeLeistung': { de: 'Preis / Leistung', en: 'Prize / Benefit', fr: 'Prix / Avantage', es: 'Premio / Beneficio', ko: '상금 / 혜택' },
+  'calendar.noLimit': { de: 'Keine Begrenzung', en: 'No limit', fr: 'Aucune limite', es: 'Sin límite', ko: '제한 없음' },
+  'calendar.allAreas': { de: 'Alle Bereiche', en: 'All areas', fr: 'Tous domaines', es: 'Todas áreas', ko: '전체 분야' },
+  'calendar.none': { de: 'Keine', en: 'None', fr: 'Aucune', es: 'Ninguno', ko: '없음' },
+  'calendar.onRequest': { de: 'Auf Anfrage', en: 'On request', fr: 'Sur demande', es: 'Bajo petición', ko: '문의' },
+  'calendar.proOnly': { de: 'Nur für Pro-Künstler', en: 'Pro artists only', fr: 'Artistes Pro uniquement', es: 'Solo artistas Pro', ko: 'Pro 아티스트 전용' },
+  'calendar.unlock': { de: 'Freischalten', en: 'Unlock', fr: 'Débloquer', es: 'Desbloquear', ko: '잠금 해제' },
+  'calendar.feeWarning': { de: 'Gebühr', en: 'Fee', fr: 'Frais', es: 'Tarifa', ko: '수수료' },
 
-  // Categories
+  // Filter categories (for buttons)
+  'filter.all': { de: 'Alle', en: 'All', fr: 'Tous', es: 'Todos', ko: '전체' },
+  'filter.Kunstpreis': { de: 'Kunstpreise', en: 'Art Prizes', fr: 'Prix d\'Art', es: 'Premios de Arte', ko: '예술상' },
+  'filter.Wettbewerb': { de: 'Wettbewerbe', en: 'Competitions', fr: 'Concours', es: 'Concursos', ko: '경쟁' },
+  'filter.Stipendium': { de: 'Stipendien', en: 'Grants', fr: 'Bourses', es: 'Becas', ko: '장학금' },
+  'filter.Förderung': { de: 'Förderung', en: 'Funding', fr: 'Financement', es: 'Financiación', ko: '지원금' },
+  'filter.Residenz': { de: 'Residencies', en: 'Residencies', fr: 'Résidences', es: 'Residencias', ko: '레지던시' },
+  'filter.Ausstellung': { de: 'Ausstellungsmöglichkeiten', en: 'Exhibition Opportunities', fr: 'Opportunités d\'exposition', es: 'Oportunidades de exposición', ko: '전시 기회' },
+  'filter.Kunst am Bau': { de: 'Kunst am Bau', en: 'Public Art', fr: 'Art Public', es: 'Arte Público', ko: '공공 예술' },
+
+  // Categories (for card header)
   'category.painting': { de: 'Malerei', en: 'Painting', fr: 'Peinture', es: 'Pintura', ko: '회화' },
   'category.sculpture': { de: 'Skulptur', en: 'Sculpture', fr: 'Sculpture', es: 'Escultura', ko: '조각' },
   'category.media': { de: 'Medienkunst', en: 'Media Art', fr: 'Art Numérique', es: 'Arte Digital', ko: '미디어 아트' },
@@ -88,6 +108,11 @@ export const translations: Translations = {
   'category.public_art': { de: 'Kunst am Bau', en: 'Public Art', fr: 'Art Public', es: 'Arte Público', ko: '공공 예술' },
   'category.Kunstpreis': { de: 'Kunstpreis', en: 'Art Prize', fr: 'Prix d\'Art', es: 'Premio de Arte', ko: '예술상' },
   'category.Wettbewerb': { de: 'Wettbewerb', en: 'Competition', fr: 'Concours', es: 'Concurso', ko: '경쟁' },
+  'category.Stipendium': { de: 'Stipendium', en: 'Grant', fr: 'Bourse', es: 'Beca', ko: '장학금' },
+  'category.Förderung': { de: 'Förderung', en: 'Funding', fr: 'Financement', es: 'Financiación', ko: '지원금' },
+  'category.Residenz': { de: 'Residenz', en: 'Residency', fr: 'Résidence', es: 'Residencia', ko: '레지던시' },
+  'category.Ausstellung': { de: 'Ausstellung', en: 'Exhibition', fr: 'Exposition', es: 'Exposición', ko: '전시' },
+  'category.Kunst am Bau': { de: 'Kunst am Bau', en: 'Public Art', fr: 'Art Public', es: 'Arte Público', ko: '공공 예술' },
 
   // Pricing
   'pricing.title': { de: 'Unsere Abonnements', en: 'Our Subscriptions', fr: 'Nos Abonnements', es: 'Nuestras Suscripciones', ko: '구독 플랜' },
