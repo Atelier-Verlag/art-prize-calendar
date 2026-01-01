@@ -27,19 +27,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // 1) Load profile for is_pro_user flag
+      const { data: profile, error: profileError } = await supabase
         .from('profiles' as any)
-        .select('is_pro_user, is_admin')
+        .select('is_pro_user')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error loading profile:', error);
-        return;
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+      } else {
+        setIsProUser((profile as any)?.is_pro_user ?? false);
       }
 
-      setIsProUser((data as any)?.is_pro_user ?? false);
-      setIsAdmin((data as any)?.is_admin ?? false);
+      // 2) Check admin role via user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles' as any)
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error checking admin role:', roleError);
+        setIsAdmin(false);
+      } else {
+        setIsAdmin(!!roleData);
+      }
     } catch (err) {
       console.error('Error loading profile:', err);
     }
