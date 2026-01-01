@@ -17,14 +17,16 @@ interface CalendarCardProps {
 
 export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
   const { t, language } = useLanguage();
+  const { isAdmin } = useAuth();
   const [showPricingModal, setShowPricingModal] = useState(false);
   
   const categoryClass = getCategoryColor(prize.category);
   const daysLeft = getDaysUntilDeadline(prize.deadline);
   const isUrgent = daysLeft <= 7;
   
-  // Paywall: Content is locked if deadline > 7 days away and user is not Pro
-  const isLocked = daysLeft > 7 && !isProUser;
+  // Paywall: Content is locked if deadline > 7 days away and user is not Pro AND not Admin
+  // Admins always have full access
+  const isLocked = daysLeft > 7 && !isProUser && !isAdmin;
   
   // Get country flag emoji based on country code
   const getCountryFlag = (country: string) => {

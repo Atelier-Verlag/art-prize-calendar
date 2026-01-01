@@ -68,6 +68,13 @@ export function Header() {
           
           {user ? (
             <>
+              {/* Admin Mode Badge - always visible when admin */}
+              {isAdmin && (
+                <Badge className="hidden sm:flex bg-destructive/10 text-destructive border border-destructive/30 gap-1 font-semibold">
+                  <Shield className="h-3 w-3" />
+                  Admin Modus
+                </Badge>
+              )}
               {isAdmin && (
                 <Button
                   variant="outline"
@@ -76,7 +83,7 @@ export function Header() {
                   onClick={() => navigate('/admin')}
                 >
                   <Shield className="h-4 w-4 mr-1" />
-                  Admin
+                  Dashboard
                 </Button>
               )}
               <Button
@@ -88,7 +95,7 @@ export function Header() {
                 <User className="h-4 w-4 mr-1" />
                 Profil
               </Button>
-              {isProUser && (
+              {isProUser && !isAdmin && (
                 <Badge className="hidden sm:flex gradient-gold text-primary border-0 gap-1">
                   <Crown className="h-3 w-3" />
                   {t('premium.badge')}
@@ -155,8 +162,14 @@ export function Header() {
             <div className="flex flex-col gap-2 mt-2 px-4">
               {user ? (
                 <>
-                  <div className="flex items-center gap-2 py-2">
-                    {isProUser && (
+                  <div className="flex items-center gap-2 py-2 flex-wrap">
+                    {isAdmin && (
+                      <Badge className="bg-destructive/10 text-destructive border border-destructive/30 gap-1 font-semibold">
+                        <Shield className="h-3 w-3" />
+                        Admin Modus
+                      </Badge>
+                    )}
+                    {isProUser && !isAdmin && (
                       <Badge className="gradient-gold text-primary border-0 gap-1">
                         <Crown className="h-3 w-3" />
                         Pro
