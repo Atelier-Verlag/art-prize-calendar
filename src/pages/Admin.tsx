@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut } from 'lucide-react';
 import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -35,9 +36,16 @@ interface ScraperSource {
 }
 
 export default function Admin() {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    await signOut();
+    navigate('/');
+  };
   
   const [contents, setContents] = useState<Record<ContentKey, string>>({
     impressum: '',
@@ -363,14 +371,37 @@ export default function Admin() {
 
         <main className="container py-16 md:py-24">
           <div className="max-w-4xl mx-auto">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/')}
-              className="mb-8"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Zurück zur Startseite
-            </Button>
+            {/* Top bar with back button and admin controls */}
+            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/')}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Zurück zur Startseite
+              </Button>
+              
+              {/* Admin indicator and logout */}
+              <div className="flex items-center gap-3">
+                {user && isAdmin && (
+                  <Badge className="bg-destructive/10 text-destructive border border-destructive/30 gap-1 font-semibold px-3 py-1.5">
+                    <Shield className="h-4 w-4" />
+                    ADMIN MODUS
+                  </Badge>
+                )}
+                {user && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {loggingOut ? 'Abmelden...' : 'Abmelden'}
+                  </Button>
+                )}
+              </div>
+            </div>
 
             <div className="flex items-center gap-3 mb-8">
               <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -599,43 +630,39 @@ export default function Admin() {
                 ))}
               </TabsList>
 
-              <TabsContent value={activeContentKey}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>
-                      {contentSections.find((s) => s.key === activeContentKey)?.title} bearbeiten
-                    </CardTitle>
-                    <CardDescription>
-                      {contentSections.find((s) => s.key === activeContentKey)?.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Textarea
-                      value={contents[activeContentKey]}
-                      onChange={(e) =>
-                        setContents((prev) => ({
-                          ...prev,
-                          [activeContentKey]: e.target.value,
-                        }))
-                      }
-                      placeholder={`Geben Sie hier den Inhalt für ${
-                        contentSections.find((s) => s.key === activeContentKey)?.title
-                      } ein...`}
-                      className="min-h-[400px] font-mono text-sm"
-                    />
-                    <div className="flex justify-end">
-                      <Button
-                        onClick={() => handleSave(activeContentKey)}
-                        disabled={saving}
-                        className="gradient-gold text-primary font-semibold border-0"
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Speichern...' : 'Speichern'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+              {contentSections.map((section) => (
+                <TabsContent key={section.key} value={section.key}>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{section.title} bearbeiten</CardTitle>
+                      <CardDescription>{section.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Textarea
+                        value={contents[section.key]}
+                        onChange={(e) =>
+                          setContents((prev) => ({
+                            ...prev,
+                            [section.key]: e.target.value,
+                          }))
+                        }
+                        placeholder={`Geben Sie hier den Inhalt für ${section.title} ein...`}
+                        className="min-h-[400px] font-mono text-sm"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={() => handleSave(section.key)}
+                          disabled={saving}
+                          className="gradient-gold text-primary font-semibold border-0"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          {saving ? 'Speichern...' : 'Speichern'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ))}
             </Tabs>
           </div>
         </main>
