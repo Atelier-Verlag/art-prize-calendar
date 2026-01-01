@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +24,9 @@ export default function Profile() {
 
   const handleManageSubscription = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Bitte melde dich erneut an.');
         return;
@@ -71,11 +72,7 @@ export default function Profile() {
       <div className="min-h-screen bg-background flex flex-col">
         <Header />
         <main className="flex-1 container py-12">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="mb-6"
-          >
+          <Button variant="ghost" onClick={() => navigate('/')} className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Zurück zum Kalender
           </Button>
@@ -87,9 +84,7 @@ export default function Profile() {
                   <User className="h-5 w-5" />
                   Mein Profil
                 </CardTitle>
-                <CardDescription>
-                  Deine Kontoinformationen und Abo-Status
-                </CardDescription>
+                <CardDescription>Deine Kontoinformationen und Abo-Status</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
@@ -125,9 +120,7 @@ export default function Profile() {
                   <CreditCard className="h-5 w-5" />
                   Abonnement
                 </CardTitle>
-                <CardDescription>
-                  Verwalte dein Abo über das Stripe-Kundenportal
-                </CardDescription>
+                <CardDescription>Verwalte dein Abo über das Stripe-Kundenportal</CardDescription>
               </CardHeader>
               <CardContent>
                 {isProUser ? (
@@ -137,9 +130,7 @@ export default function Profile() {
                   </Button>
                 ) : (
                   <div className="text-center space-y-4">
-                    <p className="text-muted-foreground">
-                      Du hast noch kein Pro-Abo.
-                    </p>
+                    <p className="text-muted-foreground">Du hast noch kein Pro-Abo.</p>
                     <Button onClick={() => navigate('/#pricing')} variant="outline">
                       Pro-Abo abschließen
                     </Button>
@@ -149,7 +140,6 @@ export default function Profile() {
             </Card>
           </div>
         </main>
-        <Footer />
       </div>
     </>
   );

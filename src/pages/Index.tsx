@@ -3,7 +3,6 @@ import { Hero } from '@/components/Hero';
 import { CalendarGrid } from '@/components/CalendarGrid';
 import { AIConsultant } from '@/components/AIConsultant';
 import { PricingSection } from '@/components/PricingSection';
-import { Footer } from '@/components/Footer';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,7 +27,6 @@ const Index = () => {
           {/* Hide pricing for logged-in Pro users */}
           {!(user && isProUser) && <PricingSection />}
         </main>
-        <Footer />
       </div>
     </>
   );

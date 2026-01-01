@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { Footer } from "@/components/Footer";
 import Index from "./pages/Index";
 import Archive from "./pages/Archive";
 import Impressum from "./pages/Impressum";
@@ -39,6 +40,9 @@ const App = () => (
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
+
+              {/* Global footer on every route */}
+              <Footer />
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
