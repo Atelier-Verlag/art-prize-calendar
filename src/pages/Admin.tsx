@@ -381,25 +381,21 @@ export default function Admin() {
                 Zurück zur Startseite
               </Button>
               
-              {/* Admin indicator and logout */}
+              {/* Admin indicator and logout - ALWAYS VISIBLE */}
               <div className="flex items-center gap-3">
-                {user && isAdmin && (
-                  <Badge className="bg-destructive/10 text-destructive border border-destructive/30 gap-1 font-semibold px-3 py-1.5">
-                    <Shield className="h-4 w-4" />
-                    ADMIN MODUS
-                  </Badge>
-                )}
-                {user && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    {loggingOut ? 'Abmelden...' : 'Abmelden'}
-                  </Button>
-                )}
+                <Badge className="bg-destructive/10 text-destructive border border-destructive/30 gap-1 font-semibold px-3 py-1.5">
+                  <Shield className="h-4 w-4" />
+                  ADMIN MODUS
+                </Badge>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  {loggingOut ? 'Abmelden...' : 'Abmelden'}
+                </Button>
               </div>
             </div>
 
@@ -422,98 +418,56 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* Scraper Section */}
-            <Card className="mb-8">
-              <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Bot className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle>Kunst-Ausschreibungs-Roboter</CardTitle>
-                      <CardDescription>Internationale Suche via Tavily & AI-Extraktion</CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={loadScraperLogs}
-                      disabled={loadingLogs}
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${loadingLogs ? 'animate-spin' : ''}`} />
-                      Aktualisieren
-                    </Button>
-                    <Button
-                      onClick={handleStartScraper}
-                      disabled={scraperRunning}
-                      className="gradient-gold text-primary font-semibold border-0"
-                    >
-                      {scraperRunning ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Läuft...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          🔄 Roboter starten
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Letzte Aktivitäten</h4>
-                  {loadingLogs ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : scraperLogs.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Noch keine Aktivitäten. Starten Sie den Roboter, um zu beginnen.
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {scraperLogs.map((log) => (
-                        <div
-                          key={log.id}
-                          className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50"
+            {/* Legal Forms Section - First */}
+            <Tabs
+              value={activeContentKey}
+              onValueChange={(v) => setActiveContentKey(v as ContentKey)}
+              className="space-y-6 mb-8"
+            >
+              <TabsList className="grid w-full grid-cols-3">
+                {contentSections.map((section) => (
+                  <TabsTrigger key={section.key} value={section.key}>
+                    {section.title}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {contentSections.map((section) => (
+                <TabsContent key={section.key} value={section.key}>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{section.title} bearbeiten</CardTitle>
+                      <CardDescription>{section.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Textarea
+                        value={contents[section.key]}
+                        onChange={(e) =>
+                          setContents((prev) => ({
+                            ...prev,
+                            [section.key]: e.target.value,
+                          }))
+                        }
+                        placeholder={`Geben Sie hier den Inhalt für ${section.title} ein...`}
+                        className="min-h-[400px] font-mono text-sm"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={() => handleSave(section.key)}
+                          disabled={saving}
+                          className="gradient-gold text-primary font-semibold border-0"
                         >
-                          {getStatusIcon(log.status)}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusBadgeClass(log.status)}`}>
-                                {log.status === 'success' ? 'Erfolgreich' : log.status === 'error' ? 'Fehler' : 'Läuft'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(log.created_at), 'dd.MM.yyyy HH:mm:ss', { locale: de })}
-                              </span>
-                              {log.items_found > 0 && (
-                                <span className="text-xs text-primary font-medium">
-                                  {log.items_found} archiviert
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-foreground mt-1 break-words">
-                              {log.message}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                          <Save className="h-4 w-4 mr-2" />
+                          {saving ? 'Speichern...' : 'Speichern'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ))}
+            </Tabs>
 
-            {/* Art Prizes Manager Section */}
-            <ArtPrizesManager />
-
-            {/* Scraper Sources Section */}
+            {/* Scraper Sources Section - Second */}
             <Card className="mb-8">
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -521,7 +475,7 @@ export default function Admin() {
                     <Globe className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>Roboter-Quellen</CardTitle>
+                    <CardTitle>Roboter-Quellen ({scraperSources.length})</CardTitle>
                     <CardDescription>Websites, die der Roboter durchsuchen soll</CardDescription>
                   </div>
                 </div>
@@ -617,53 +571,96 @@ export default function Admin() {
               </CardContent>
             </Card>
 
-            <Tabs
-              value={activeContentKey}
-              onValueChange={(v) => setActiveContentKey(v as ContentKey)}
-              className="space-y-6"
-            >
-              <TabsList className="grid w-full grid-cols-3">
-                {contentSections.map((section) => (
-                  <TabsTrigger key={section.key} value={section.key}>
-                    {section.title}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {contentSections.map((section) => (
-                <TabsContent key={section.key} value={section.key}>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{section.title} bearbeiten</CardTitle>
-                      <CardDescription>{section.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <Textarea
-                        value={contents[section.key]}
-                        onChange={(e) =>
-                          setContents((prev) => ({
-                            ...prev,
-                            [section.key]: e.target.value,
-                          }))
-                        }
-                        placeholder={`Geben Sie hier den Inhalt für ${section.title} ein...`}
-                        className="min-h-[400px] font-mono text-sm"
-                      />
-                      <div className="flex justify-end">
-                        <Button
-                          onClick={() => handleSave(section.key)}
-                          disabled={saving}
-                          className="gradient-gold text-primary font-semibold border-0"
+            {/* Scraper Robot Section - Third */}
+            <Card className="mb-8">
+              <CardHeader>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Bot className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle>Kunst-Ausschreibungs-Roboter</CardTitle>
+                      <CardDescription>Internationale Suche via Tavily & AI-Extraktion</CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={loadScraperLogs}
+                      disabled={loadingLogs}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${loadingLogs ? 'animate-spin' : ''}`} />
+                      Aktualisieren
+                    </Button>
+                    <Button
+                      onClick={handleStartScraper}
+                      disabled={scraperRunning}
+                      className="gradient-gold text-primary font-semibold border-0"
+                    >
+                      {scraperRunning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Läuft...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          🔄 Roboter starten
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Letzte Aktivitäten</h4>
+                  {loadingLogs ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : scraperLogs.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Noch keine Aktivitäten. Starten Sie den Roboter, um zu beginnen.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {scraperLogs.map((log) => (
+                        <div
+                          key={log.id}
+                          className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50"
                         >
-                          <Save className="h-4 w-4 mr-2" />
-                          {saving ? 'Speichern...' : 'Speichern'}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              ))}
-            </Tabs>
+                          {getStatusIcon(log.status)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusBadgeClass(log.status)}`}>
+                                {log.status === 'success' ? 'Erfolgreich' : log.status === 'error' ? 'Fehler' : 'Läuft'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(log.created_at), 'dd.MM.yyyy HH:mm:ss', { locale: de })}
+                              </span>
+                              {log.items_found > 0 && (
+                                <span className="text-xs text-primary font-medium">
+                                  {log.items_found} archiviert
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-foreground mt-1 break-words">
+                              {log.message}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Art Prizes Manager Section - Fourth */}
+            <ArtPrizesManager />
           </div>
         </main>
       </div>
