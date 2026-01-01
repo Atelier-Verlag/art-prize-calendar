@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCategoryColor, formatDeadline, getDaysUntilDeadline } from '@/data/mockArtPrizes';
+import { getCategoryColor, formatDeadline } from '@/data/mockArtPrizes';
 import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import {
@@ -37,16 +37,16 @@ interface PrizeDetailModalProps {
 
 export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDetailModalProps) {
   const { t, language } = useLanguage();
-  const { user, startCheckout } = useAuth();
+  const { user, isAdmin, startCheckout } = useAuth();
   const navigate = useNavigate();
   const [showAIDialog, setShowAIDialog] = useState(false);
 
   if (!prize) return null;
 
   const categoryClass = getCategoryColor(prize.category);
-  const daysLeft = getDaysUntilDeadline(prize.deadline);
-  const isWithin14Days = daysLeft <= 14;
-  const canAccess = isProUser || isWithin14Days;
+
+  // Paid access: only admins/pro users can see tender details.
+  const canAccess = isAdmin || (user && isProUser);
 
   const handleUpgrade = () => {
     if (!user) {
