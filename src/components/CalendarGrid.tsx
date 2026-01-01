@@ -70,7 +70,7 @@ export function CalendarGrid() {
                   variant={isActive ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedCategory(filter.value)}
-                  className={isActive ? activeColorClass : ''}
+                  className={`${isActive ? activeColorClass : 'hover:bg-[hsl(220,60%,45%)] hover:text-white hover:border-[hsl(220,60%,45%)]'}`}
                 >
                   {t(filter.labelKey)}
                 </Button>

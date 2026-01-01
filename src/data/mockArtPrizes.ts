@@ -223,11 +223,16 @@ export function getCategoryColor(category: Category): string {
   return colors[category] || 'bg-gray-100 text-gray-800';
 }
 
-// Active filter button colors - ALL BLUE for consistency
+// Active filter button colors - "Alle" is black, others are blue
 export function getCategoryFilterColor(category: Category | 'all', isActive: boolean): string {
   if (!isActive) return '';
   
-  // All active states use the same blue color for consistency
+  // "Alle" button uses black when active
+  if (category === 'all') {
+    return 'bg-foreground text-background hover:bg-foreground/90';
+  }
+  
+  // All other categories use blue when active
   return 'bg-[hsl(220,60%,45%)] text-white hover:bg-[hsl(220,60%,40%)]';
 }
 

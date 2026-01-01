@@ -61,6 +61,13 @@ export const translations: Translations = {
     es: 'El calendario completo de convocatorias para artistas — cuidadosamente curado',
     ko: '아티스트를 위한 종합 공모전 캘린더 — 세심하게 큐레이션'
   },
+  'hero.subtitleSuffix': { 
+    de: 'umfassend und laufend aktualisiert.', 
+    en: 'comprehensive and continuously updated.',
+    fr: 'complet et mis à jour en continu.',
+    es: 'completo y actualizado continuamente.',
+    ko: '종합적이고 지속적으로 업데이트됩니다.'
+  },
   'hero.cta': { de: 'Jetzt starten', en: 'Get started', fr: 'Commencer', es: 'Comenzar', ko: '시작하기' },
   'hero.cta.secondary': { de: 'Mehr erfahren', en: 'Learn more', fr: 'En savoir plus', es: 'Saber más', ko: '더 알아보기' },
 
