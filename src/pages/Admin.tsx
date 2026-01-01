@@ -157,12 +157,21 @@ export default function Admin() {
   }, [canUseBackend]);
 
   const handleSave = async (key: ContentKey) => {
+    if (!canUseBackend) {
+      toast({
+        title: 'Nicht berechtigt',
+        description: 'Bitte als Admin einloggen, um Inhalte zu speichern.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSaving(true);
 
+    // Use upsert so saving works even if the row was deleted/missing.
     const { error } = await supabase
       .from('site_content' as any)
-      .update({ content: contents[key] })
-      .eq('key', key);
+      .upsert({ key, content: contents[key] }, { onConflict: 'key' as any });
 
     if (error) {
       console.error('Error saving content:', error);
@@ -467,111 +476,7 @@ export default function Admin() {
               ))}
             </Tabs>
 
-            {/* Scraper Sources Section - Second */}
-            <Card className="mb-8">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Globe className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle>Roboter-Quellen ({scraperSources.length})</CardTitle>
-                    <CardDescription>Websites, die der Roboter durchsuchen soll</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Add new source */}
-                <div className="flex gap-2 flex-wrap">
-                  <Input
-                    placeholder="Name (z.B. Kunstforum)"
-                    value={newSourceName}
-                    onChange={(e) => setNewSourceName(e.target.value)}
-                    className="flex-1 min-w-[150px]"
-                  />
-                  <Input
-                    placeholder="URL (z.B. https://kunstforum.de/wettbewerbe)"
-                    value={newSourceUrl}
-                    onChange={(e) => setNewSourceUrl(e.target.value)}
-                    className="flex-[2] min-w-[250px]"
-                  />
-                  <Button
-                    onClick={handleAddSource}
-                    disabled={addingSource || !newSourceName.trim() || !newSourceUrl.trim()}
-                    className="gradient-gold text-primary font-semibold border-0"
-                  >
-                    {addingSource ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Hinzufügen
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Sources list */}
-                {loadingSources ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : scraperSources.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
-                    Noch keine Quellen hinzugefügt. Fügen Sie oben eine URL hinzu.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {scraperSources.map((source) => (
-                      <div
-                        key={source.id}
-                        className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${
-                          source.active 
-                            ? 'bg-muted/50 border-border/50' 
-                            : 'bg-muted/20 border-border/30 opacity-60'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <Link className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-medium text-foreground truncate">{source.name}</p>
-                            <a 
-                              href={source.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline truncate block"
-                            >
-                              {source.url}
-                            </a>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              {source.active ? 'Aktiv' : 'Inaktiv'}
-                            </span>
-                            <Switch
-                              checked={source.active}
-                              onCheckedChange={(checked) => handleToggleSource(source.id, checked)}
-                            />
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteSource(source.id, source.name)}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Scraper Robot Section - Third */}
+            {/* Scraper Robot Section */}
             <Card className="mb-8">
               <CardHeader>
                 <div className="flex items-center justify-between flex-wrap gap-4">
@@ -647,9 +552,7 @@ export default function Admin() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-foreground mt-1 break-words">
-                              {log.message}
-                            </p>
+                            <p className="text-sm text-foreground mt-1 break-words">{log.message}</p>
                           </div>
                         </div>
                       ))}
@@ -659,8 +562,110 @@ export default function Admin() {
               </CardContent>
             </Card>
 
-            {/* Art Prizes Manager Section - Fourth */}
+            {/* Art Prizes Manager Section */}
             <ArtPrizesManager />
+
+            {/* Scraper Sources Section (bottom) */}
+            <Card className="mt-8">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Globe className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Roboter-Quellen ({scraperSources.length})</CardTitle>
+                    <CardDescription>Websites, die der Roboter durchsuchen soll</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2 flex-wrap">
+                  <Input
+                    placeholder="Name (z.B. Kunstforum)"
+                    value={newSourceName}
+                    onChange={(e) => setNewSourceName(e.target.value)}
+                    className="flex-1 min-w-[150px]"
+                  />
+                  <Input
+                    placeholder="URL (z.B. https://kunstforum.de/wettbewerbe)"
+                    value={newSourceUrl}
+                    onChange={(e) => setNewSourceUrl(e.target.value)}
+                    className="flex-[2] min-w-[250px]"
+                  />
+                  <Button
+                    onClick={handleAddSource}
+                    disabled={addingSource || !newSourceName.trim() || !newSourceUrl.trim()}
+                    className="gradient-gold text-primary font-semibold border-0"
+                  >
+                    {addingSource ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Hinzufügen
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {loadingSources ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : scraperSources.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+                    Noch keine Quellen hinzugefügt. Fügen Sie oben eine URL hinzu.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {scraperSources.map((source) => (
+                      <div
+                        key={source.id}
+                        className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${
+                          source.active
+                            ? 'bg-muted/50 border-border/50'
+                            : 'bg-muted/20 border-border/30 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Link className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{source.name}</p>
+                            <a
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline truncate block"
+                            >
+                              {source.url}
+                            </a>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {source.active ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                            <Switch
+                              checked={source.active}
+                              onCheckedChange={(checked) => handleToggleSource(source.id, checked)}
+                            />
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSource(source.id, source.name)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </main>
       </div>

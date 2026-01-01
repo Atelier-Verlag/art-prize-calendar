@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCategoryColor, formatDeadline, getDaysUntilDeadline } from '@/data/mockArtPrizes';
@@ -6,7 +7,7 @@ import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Lock, Crown } from 'lucide-react';
+import { MapPin, Lock, Crown, LogIn } from 'lucide-react';
 import { PricingModal } from '@/components/PricingModal';
 
 interface CalendarCardProps {
@@ -17,26 +18,28 @@ interface CalendarCardProps {
 
 export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
   const { t, language } = useLanguage();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [showPricingModal, setShowPricingModal] = useState(false);
-  
+
   const categoryClass = getCategoryColor(prize.category);
   const daysLeft = getDaysUntilDeadline(prize.deadline);
   const isUrgent = daysLeft <= 7;
-  
-  // TEMPORARY DEBUG OVERRIDE: unlock all cards (ignore paywall)
-  const isLocked = false;
-  
+
+  // Paid access: hide details for visitors who are not logged-in / not subscribed.
+  const hasAccess = !!user && (isProUser || isAdmin);
+  const isLocked = !hasAccess;
+
   // Get country flag emoji based on country code
   const getCountryFlag = (country: string) => {
     const countryMap: Record<string, string> = {
-      'Deutschland': '🇩🇪',
-      'Germany': '🇩🇪',
-      'Österreich': '🇦🇹',
-      'Austria': '🇦🇹',
-      'Schweiz': '🇨🇭',
-      'Switzerland': '🇨🇭',
-      'International': '🌍',
+      Deutschland: '🇩🇪',
+      Germany: '🇩🇪',
+      Österreich: '🇦🇹',
+      Austria: '🇦🇹',
+      Schweiz: '🇨🇭',
+      Switzerland: '🇨🇭',
+      International: '🌍',
     };
     return countryMap[country] || '🌍';
   };
@@ -78,22 +81,30 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Public visitors must log in first.
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    // Logged-in non-pro users get upgrade prompt.
     setShowPricingModal(true);
   };
 
   return (
-    <article 
+    <article
       className="group relative bg-card rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer border border-border"
       onClick={isLocked ? undefined : onClick}
     >
       {/* Header Bar - Color based on urgency */}
-      <div className={`${isUrgent ? 'bg-destructive' : 'bg-[hsl(220,60%,45%)]'} px-4 py-3 flex justify-between items-center`}>
-        <span className="text-white text-sm font-semibold uppercase tracking-wide">
+      <div className={`${isUrgent ? 'bg-destructive' : 'bg-primary'} px-4 py-3 flex justify-between items-center`}>
+        <span className="text-primary-foreground text-sm font-semibold uppercase tracking-wide">
           {prize.category}
         </span>
         <div className="text-right">
-          <span className="text-white/80 text-xs uppercase tracking-wider block">{t('calendar.deadline')}</span>
-          <span className="text-white font-extrabold text-lg">
+          <span className="text-primary-foreground/80 text-xs uppercase tracking-wider block">{t('calendar.deadline')}</span>
+          <span className="text-primary-foreground font-extrabold text-lg">
             {formatDeadline(prize.deadline, language)}
           </span>
         </div>
@@ -106,8 +117,13 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
           {prize.name}
         </h3>
 
-        {/* Meta Info - 3 separate lines */}
-        <div className="space-y-2 mb-4 text-sm">
+        {/* Meta Info - hidden/blurred if locked */}
+        <div
+          className={`space-y-2 mb-4 text-sm ${
+            isLocked ? 'blur-sm select-none pointer-events-none' : ''
+          }`}
+          aria-hidden={isLocked}
+        >
           <div className="flex flex-wrap gap-x-2">
             <span className="text-muted-foreground">{t('card.sparte')}:</span>
             <span className="font-medium text-foreground">{getDiscipline()}</span>
@@ -122,13 +138,18 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
           </div>
         </div>
 
-        {/* Prize Amount Highlight */}
-        <div className="bg-accent/10 rounded-lg p-3 mb-4">
+        {/* Prize Amount Highlight - hidden/blurred if locked */}
+        <div
+          className={`bg-accent/10 rounded-lg p-3 mb-4 ${
+            isLocked ? 'blur-sm select-none pointer-events-none' : ''
+          }`}
+          aria-hidden={isLocked}
+        >
           <span className="text-sm font-semibold text-foreground">{t('card.prizeLabel')}:</span>
-          <div className="font-display text-xl font-bold text-[#000000] dark:text-foreground">
-            {prize.prizeAmount && prize.prizeAmount > 0 
+          <div className="font-display text-xl font-bold text-foreground">
+            {prize.prizeAmount && prize.prizeAmount > 0
               ? formatCurrency(prize.prizeAmount, prize.currency, language)
-              : (prize.benefitDetails || t('card.noInfo'))}
+              : prize.benefitDetails || t('card.noInfo')}
           </div>
         </div>
 
@@ -147,14 +168,18 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
               {getCountryFlag(prize.country)} {prize.country}
             </Badge>
           </div>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
+
+          <Button
+            variant="ghost"
+            size="sm"
             className="text-primary font-semibold h-8 md:h-9 px-3 md:px-4 min-h-[44px]"
             onClick={(e) => {
               e.stopPropagation();
-              if (!isLocked) onClick();
+              if (isLocked) {
+                handleUnlock(e);
+                return;
+              }
+              onClick();
             }}
           >
             {t('card.details')}
@@ -162,30 +187,38 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
         </div>
       </div>
 
-      {/* Lock Overlay for non-Pro users when deadline > 7 days */}
+      {/* Lock Overlay for visitors/non-pro */}
       {isLocked && (
-        <div 
+        <div
           className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10"
           onClick={(e) => e.stopPropagation()}
         >
           <Lock className="h-10 w-10 text-muted-foreground mb-3" />
-          <p className="text-sm font-semibold text-foreground mb-3">{t('card.proOnly')}</p>
-          <Button 
-            size="sm" 
+          <p className="text-sm font-semibold text-foreground mb-3">
+            {!user ? 'Einloggen um Details zu sehen' : t('card.proOnly')}
+          </p>
+          <Button
+            size="sm"
             className="gradient-gold text-primary font-semibold border-0"
             onClick={handleUnlock}
           >
-            <Crown className="h-4 w-4 mr-2" />
-            {t('card.unlock')}
+            {!user ? (
+              <>
+                <LogIn className="h-4 w-4 mr-2" />
+                Einloggen
+              </>
+            ) : (
+              <>
+                <Crown className="h-4 w-4 mr-2" />
+                {t('card.unlock')}
+              </>
+            )}
           </Button>
         </div>
       )}
 
       {/* Pricing Modal */}
-      <PricingModal 
-        isOpen={showPricingModal} 
-        onClose={() => setShowPricingModal(false)} 
-      />
+      <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
     </article>
   );
 }
