@@ -26,30 +26,30 @@ export function Hero() {
         <div className="mx-auto max-w-4xl text-center">
           {/* Title - 3 Lines */}
           <div className="animate-fade-in-up">
-            {/* Line 1 - Small */}
-            <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground font-medium mb-2">
+            {/* Line 1 - Larger */}
+            <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground font-medium mb-2">
               {t('hero.title.part1')}
             </p>
             
-            {/* Line 2 - Main/Large */}
+            {/* Line 2 - Main/Large with Dark Blue and straight underline */}
             <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-3">
               <span className="relative inline-block">
-                <span className="relative z-10 bg-gradient-to-r from-accent to-[hsl(45,85%,65%)] bg-clip-text text-transparent">
+                <span className="relative z-10 text-[hsl(220,60%,35%)]">
                   {t('hero.title.highlight')}
                 </span>
-                <span className="absolute -bottom-2 left-0 right-0 h-3 bg-accent/20 -rotate-1 rounded" />
+                <span className="absolute -bottom-2 left-0 right-0 h-3 bg-[hsl(220,60%,35%,0.2)] rounded" />
               </span>
             </h1>
             
-            {/* Line 3 - Small */}
-            <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground font-medium">
+            {/* Line 3 - Larger */}
+            <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground font-medium">
               {t('hero.title.part2')}
             </p>
           </div>
 
           {/* Subtitle */}
           <p className="mt-8 text-base text-muted-foreground md:text-lg max-w-2xl mx-auto animate-fade-in-up delay-100 opacity-0">
-            {t('hero.subtitle')}
+            {t('hero.subtitle')} — umfassend und laufend aktualisiert.
           </p>
         </div>
       </div>
