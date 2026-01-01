@@ -55,11 +55,11 @@ export const translations: Translations = {
     ko: ' 독일 및 국제 공모전'
   },
   'hero.subtitle': { 
-    de: 'Der umfassende Ausschreibungskalender für Künstlerinnen und Künstler — sorgfältig kuratiert.', 
-    en: 'The comprehensive call calendar for artists — carefully curated.',
-    fr: 'Le calendrier complet des appels pour artistes — soigneusement sélectionné.',
-    es: 'El calendario completo de convocatorias para artistas — cuidadosamente curado.',
-    ko: '아티스트를 위한 종합 공모전 캘린더 — 세심하게 큐레이션.'
+    de: 'Der umfassende Ausschreibungskalender für Künstlerinnen und Künstler — sorgfältig kuratiert', 
+    en: 'The comprehensive call calendar for artists — carefully curated',
+    fr: 'Le calendrier complet des appels pour artistes — soigneusement sélectionné',
+    es: 'El calendario completo de convocatorias para artistas — cuidadosamente curado',
+    ko: '아티스트를 위한 종합 공모전 캘린더 — 세심하게 큐레이션'
   },
   'hero.cta': { de: 'Jetzt starten', en: 'Get started', fr: 'Commencer', es: 'Comenzar', ko: '시작하기' },
   'hero.cta.secondary': { de: 'Mehr erfahren', en: 'Learn more', fr: 'En savoir plus', es: 'Saber más', ko: '더 알아보기' },
@@ -84,6 +84,18 @@ export const translations: Translations = {
   'calendar.proOnly': { de: 'Nur für Pro-Künstler', en: 'Pro artists only', fr: 'Artistes Pro uniquement', es: 'Solo artistas Pro', ko: 'Pro 아티스트 전용' },
   'calendar.unlock': { de: 'Freischalten', en: 'Unlock', fr: 'Débloquer', es: 'Desbloquear', ko: '잠금 해제' },
   'calendar.feeWarning': { de: 'Gebühr', en: 'Fee', fr: 'Frais', es: 'Tarifa', ko: '수수료' },
+
+  // Card labels
+  'card.sparte': { de: 'Sparte', en: 'Discipline', fr: 'Discipline', es: 'Disciplina', ko: '분야' },
+  'card.age': { de: 'Alter', en: 'Age', fr: 'Âge', es: 'Edad', ko: '연령' },
+  'card.requirement': { de: 'Voraussetzung', en: 'Requirement', fr: 'Condition', es: 'Requisito', ko: '요구사항' },
+  'card.prizeLabel': { de: 'Preis / Leistung', en: 'Prize / Benefit', fr: 'Prix / Avantage', es: 'Premio / Beneficio', ko: '상금 / 혜택' },
+  'card.noRestriction': { de: 'Keine Begrenzung', en: 'No limit', fr: 'Aucune limite', es: 'Sin límite', ko: '제한 없음' },
+  'card.none': { de: 'Keine', en: 'None', fr: 'Aucune', es: 'Ninguno', ko: '없음' },
+  'card.noInfo': { de: 'Auf Anfrage', en: 'On request', fr: 'Sur demande', es: 'Bajo petición', ko: '문의' },
+  'card.details': { de: 'Details ansehen', en: 'View details', fr: 'Voir les détails', es: 'Ver detalles', ko: '세부정보 보기' },
+  'card.proOnly': { de: 'Nur für Pro-Künstler', en: 'Pro artists only', fr: 'Artistes Pro uniquement', es: 'Solo artistas Pro', ko: 'Pro 아티스트 전용' },
+  'card.unlock': { de: 'Freischalten', en: 'Unlock', fr: 'Débloquer', es: 'Desbloquear', ko: '잠금 해제' },
 
   // Filter categories (for buttons)
   'filter.all': { de: 'Alle', en: 'All', fr: 'Tous', es: 'Todos', ko: '전체' },
@@ -113,6 +125,29 @@ export const translations: Translations = {
   'category.Residenz': { de: 'Residenz', en: 'Residency', fr: 'Résidence', es: 'Residencia', ko: '레지던시' },
   'category.Ausstellung': { de: 'Ausstellung', en: 'Exhibition', fr: 'Exposition', es: 'Exposición', ko: '전시' },
   'category.Kunst am Bau': { de: 'Kunst am Bau', en: 'Public Art', fr: 'Art Public', es: 'Arte Público', ko: '공공 예술' },
+
+  // AI Consultant
+  'ai.badge': { de: 'KI-gestützt', en: 'AI-powered', fr: 'Propulsé par IA', es: 'Impulsado por IA', ko: 'AI 기반' },
+  'ai.description': { de: 'Nutzen Sie unsere KI, um überzeugende Bewerbungsschreiben zu erstellen und Ihren Bewerbungsprozess zu optimieren.', en: 'Use our AI to create compelling application letters and optimize your application process.', fr: 'Utilisez notre IA pour créer des lettres de candidature convaincantes et optimiser votre processus de candidature.', es: 'Usa nuestra IA para crear cartas de solicitud convincentes y optimizar tu proceso de solicitud.', ko: 'AI를 사용하여 설득력 있는 지원서를 작성하고 지원 과정을 최적화하세요.' },
+  'ai.feature1.title': { de: 'Bewerbungsschreiben', en: 'Application Letter', fr: 'Lettre de candidature', es: 'Carta de solicitud', ko: '지원서' },
+  'ai.feature1.desc': { de: 'Lassen Sie sich ein professionelles Anschreiben für Ihre Kunstbewerbung erstellen.', en: 'Have a professional cover letter created for your art application.', fr: 'Faites rédiger une lettre de motivation professionnelle pour votre candidature artistique.', es: 'Haz que te creen una carta de presentación profesional para tu solicitud artística.', ko: '예술 지원을 위한 전문적인 커버레터를 작성하세요.' },
+  'ai.feature2.title': { de: 'Bewerbungsfahrplan', en: 'Application Roadmap', fr: 'Feuille de route', es: 'Hoja de ruta', ko: '지원 로드맵' },
+  'ai.feature2.desc': { de: 'Erhalten Sie einen detaillierten Zeitplan für Ihre Bewerbungsstrategie.', en: 'Get a detailed timeline for your application strategy.', fr: 'Obtenez un calendrier détaillé pour votre stratégie de candidature.', es: 'Obtén un calendario detallado para tu estrategia de solicitud.', ko: '지원 전략을 위한 상세한 일정을 받으세요.' },
+  'ai.startTitle': { de: 'Starten Sie Ihre Anfrage', en: 'Start your request', fr: 'Commencez votre demande', es: 'Inicia tu solicitud', ko: '요청 시작' },
+  'ai.startDesc': { de: 'Beschreiben Sie die Ausschreibung und was Sie benötigen.', en: 'Describe the call and what you need.', fr: 'Décrivez l\'appel et ce dont vous avez besoin.', es: 'Describe la convocatoria y lo que necesitas.', ko: '공모와 필요한 것을 설명하세요.' },
+  'ai.placeholder': { de: 'Ich möchte mich für [Name des Preises] bewerben. Meine Kunst beschäftigt sich mit...', en: 'I want to apply for [Prize Name]. My art deals with...', fr: 'Je veux postuler pour [Nom du Prix]. Mon art traite de...', es: 'Quiero solicitar [Nombre del Premio]. Mi arte trata de...', ko: '[상 이름]에 지원하고 싶습니다. 제 예술은...' },
+  'ai.generate': { de: 'Generieren', en: 'Generate', fr: 'Générer', es: 'Generar', ko: '생성' },
+  'ai.proFeature': { de: 'Pro-Feature', en: 'Pro Feature', fr: 'Fonctionnalité Pro', es: 'Función Pro', ko: 'Pro 기능' },
+  'ai.proDescription': { de: 'Upgraden Sie auf Pro, um den KI-Berater zu nutzen.', en: 'Upgrade to Pro to use the AI consultant.', fr: 'Passez à Pro pour utiliser le consultant IA.', es: 'Actualiza a Pro para usar el consultor IA.', ko: 'AI 컨설턴트를 사용하려면 Pro로 업그레이드하세요.' },
+
+  // Modal labels
+  'modal.description': { de: 'Beschreibung', en: 'Description', fr: 'Description', es: 'Descripción', ko: '설명' },
+  'modal.requirements': { de: 'Anforderungen', en: 'Requirements', fr: 'Conditions', es: 'Requisitos', ko: '요구사항' },
+  'modal.attention': { de: 'Achtung!', en: 'Attention!', fr: 'Attention!', es: '¡Atención!', ko: '주의!' },
+  'modal.feeWarning': { de: 'Gebühr!', en: 'Fee!', fr: 'Frais!', es: '¡Tarifa!', ko: '수수료!' },
+  'modal.website': { de: 'Zur Website des Veranstalters', en: 'Visit organizer website', fr: 'Visiter le site de l\'organisateur', es: 'Visitar sitio del organizador', ko: '주최자 웹사이트 방문' },
+  'modal.useAI': { de: 'nutzen', en: 'use', fr: 'utiliser', es: 'usar', ko: '사용' },
+  'modal.upgradeText': { de: 'Erhalten Sie Zugang zu allen Details, Beschreibungen, Anforderungen und Links.', en: 'Get access to all details, descriptions, requirements and links.', fr: 'Obtenez l\'accès à tous les détails, descriptions, conditions et liens.', es: 'Obtén acceso a todos los detalles, descripciones, requisitos y enlaces.', ko: '모든 세부정보, 설명, 요구사항 및 링크에 액세스하세요.' },
 
   // Pricing
   'pricing.title': { de: 'Unsere Abonnements', en: 'Our Subscriptions', fr: 'Nos Abonnements', es: 'Nuestras Suscripciones', ko: '구독 플랜' },

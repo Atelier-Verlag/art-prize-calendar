@@ -1,231 +1,188 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCategoryColor, formatDeadline, getDaysUntilDeadline, isDeadlineSoon } from '@/data/mockArtPrizes';
+import { getCategoryColor, formatDeadline, getDaysUntilDeadline } from '@/data/mockArtPrizes';
 import type { ArtPrize } from '@/hooks/useArtPrizes';
+import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lock, ThumbsDown, ExternalLink, Calendar } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { MapPin, Lock, Crown } from 'lucide-react';
 
 interface CalendarCardProps {
   prize: ArtPrize;
+  onClick: () => void;
   isProUser: boolean;
-  onDetailsClick: () => void;
 }
 
-// Map country to allowed display values
-function getCountryBadge(country: string): string {
-  const normalizedCountry = country?.toLowerCase() || '';
-  
-  if (normalizedCountry.includes('schweiz') || normalizedCountry === 'ch' || normalizedCountry.includes('switzerland')) {
-    return 'Schweiz';
-  }
-  if (normalizedCountry.includes('österreich') || normalizedCountry === 'at' || normalizedCountry.includes('austria')) {
-    return 'Österreich';
-  }
-  if (normalizedCountry.includes('deutschland') || normalizedCountry === 'de' || normalizedCountry.includes('germany')) {
-    return 'Deutschland';
-  }
-  return 'International';
-}
-
-// Derive precise location from region (for footer display)
-function getPreciseLocation(region: string): string | null {
-  const r = region?.toLowerCase() || '';
-  
-  // Check for specific regions/cities - return exact location
-  if (r.includes('berlin')) return 'Berlin';
-  if (r.includes('nrw') || r.includes('nordrhein')) return 'NRW';
-  if (r.includes('bayern')) return 'Bayern';
-  if (r.includes('hamburg')) return 'Hamburg';
-  if (r.includes('köln')) return 'Stadt Köln';
-  if (r.includes('münchen')) return 'München';
-  if (r.includes('tirol')) return 'Region Tirol';
-  if (r.includes('kärnten')) return 'Kärnten';
-  if (r.includes('wien')) return 'Wien';
-  if (r.includes('zürich')) return 'Zürich';
-  
-  // No specific restriction - return null
-  return null;
-}
-
-// Get requirement from requirements array
-function getRequirement(requirements: string[] | null): string {
-  if (!requirements || requirements.length === 0) return 'Keine';
-  // Return first requirement as main display
-  return requirements[0];
-}
-
-export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardProps) {
-  const { language, t } = useLanguage();
+export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
+  const { t, language } = useLanguage();
   const { user, startCheckout } = useAuth();
   const navigate = useNavigate();
   
-  const deadlineDate = new Date(prize.deadline);
-  const daysUntilDeadline = differenceInDays(deadlineDate, new Date());
-  const isDeadlineUrgent = daysUntilDeadline >= 0 && daysUntilDeadline < 7;
-  const categoryColorClass = getCategoryColor(prize.category);
+  const categoryClass = getCategoryColor(prize.category);
+  const daysLeft = getDaysUntilDeadline(prize.deadline);
+  const isUrgent = daysLeft <= 7;
   
-  // PAYWALL LOGIC: Deadline > 7 days = LOCKED, <= 7 days = FREE
-  const isLocked = daysUntilDeadline > 7;
-  const canAccess = isProUser || !isLocked;
+  // Paywall: Content is locked if deadline > 7 days away and user is not Pro
+  const isLocked = daysLeft > 7 && !isProUser;
+  
+  // Get country flag emoji based on country code
+  const getCountryFlag = (country: string) => {
+    const countryMap: Record<string, string> = {
+      'Deutschland': '🇩🇪',
+      'Germany': '🇩🇪',
+      'Österreich': '🇦🇹',
+      'Austria': '🇦🇹',
+      'Schweiz': '🇨🇭',
+      'Switzerland': '🇨🇭',
+      'International': '🌍',
+    };
+    return countryMap[country] || '🌍';
+  };
+
+  // Get display value for "Sparte" (discipline)
+  const getDiscipline = () => {
+    return prize.category || 'Gemischt';
+  };
+
+  // Get age display
+  const getAgeDisplay = () => {
+    if (prize.ageMin && prize.ageMax) {
+      return `${prize.ageMin}-${prize.ageMax} ${language === 'de' ? 'Jahre' : 'years'}`;
+    }
+    if (prize.ageMax) {
+      return `≤ ${prize.ageMax} ${language === 'de' ? 'Jahre' : 'years'}`;
+    }
+    if (prize.ageMin) {
+      return `≥ ${prize.ageMin} ${language === 'de' ? 'Jahre' : 'years'}`;
+    }
+    return t('card.noRestriction');
+  };
+
+  // Get requirement display
+  const getRequirement = () => {
+    if (prize.requirements && prize.requirements.length > 0) {
+      return prize.requirements[0];
+    }
+    return t('card.none');
+  };
+
+  // Get precise location (specific region restriction)
+  const getPreciseLocation = () => {
+    if (prize.region && prize.region !== prize.country) {
+      return prize.region;
+    }
+    return null;
+  };
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
       navigate('/auth');
     } else {
-      startCheckout('price_1SjMfs2MuRh0bb5poHynGcCg');
+      startCheckout('price_1RjZ68D70Qs4RhIVb39PiHqZ');
     }
   };
-
-  const countryBadge = getCountryBadge(prize.country);
-
-  // Format age display
-  const getAgeDisplay = () => {
-    if ((prize.ageMin === null || prize.ageMin === 0) && (prize.ageMax === null || prize.ageMax === 0)) {
-      return 'Keine Begrenzung';
-    }
-    if (prize.ageMax && (!prize.ageMin || prize.ageMin === 0)) {
-      return `bis ${prize.ageMax}`;
-    }
-    if (prize.ageMin && (!prize.ageMax || prize.ageMax === 0)) {
-      return `ab ${prize.ageMin}`;
-    }
-    return `${prize.ageMin}-${prize.ageMax}`;
-  };
-
-  // Determine header bar color based on deadline
-  const headerBarColorClass = isDeadlineUrgent 
-    ? 'bg-destructive' 
-    : 'bg-primary';
 
   return (
-    <div
-      className={`
-        relative group
-        bg-card rounded-xl overflow-hidden
-        shadow-[0_4px_20px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]
-        hover:shadow-[0_8px_30px_rgba(0,0,0,0.12),0_4px_10px_rgba(0,0,0,0.06)]
-        transition-all duration-300 ease-out
-        ${!canAccess ? 'opacity-90' : ''}
-      `}
+    <article 
+      className="group relative bg-card rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer border border-border"
+      onClick={isLocked ? undefined : onClick}
     >
-      {/* COLORED HEADER BAR - FINAL DESIGN */}
-      <div className={`${headerBarColorClass} px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between`}>
-        <span className="text-white text-xs md:text-sm font-semibold">
-          {t(`category.${prize.category}`) || prize.category}
+      {/* Header Bar - Color based on urgency */}
+      <div className={`${isUrgent ? 'bg-destructive' : 'bg-[hsl(220,60%,45%)]'} px-4 py-3 flex justify-between items-center`}>
+        <span className="text-white text-sm font-semibold uppercase tracking-wide">
+          {prize.category}
         </span>
-        <div className="text-white text-right">
-          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wide block leading-tight">
-            {t('calendar.deadline')}
-          </span>
-          <span className="text-sm md:text-base font-extrabold leading-tight">
-            {format(deadlineDate, 'dd.MM.yyyy', { locale: de })}
+        <div className="text-right">
+          <span className="text-white/80 text-xs uppercase tracking-wider block">{t('calendar.deadline')}</span>
+          <span className="text-white font-extrabold text-lg">
+            {formatDeadline(prize.deadline, language)}
           </span>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-3 md:p-4 relative">
-        {/* Fee warning - always visible */}
-        {prize.fee !== null && prize.fee > 0 && (
-          <div className="mb-3">
-            <Badge className="bg-destructive border-0 font-bold animate-pulse-soft text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 flex items-center gap-1 md:gap-1.5 w-fit">
-              <ThumbsDown className="w-3 h-3 md:w-4 md:h-4 text-black fill-black stroke-[2.5]" />
-              <span className="text-destructive-foreground">{prize.fee} € {t('calendar.feeWarning')}!</span>
+      {/* Card Body */}
+      <div className="p-4 md:p-5">
+        {/* Title */}
+        <h3 className="font-display text-lg md:text-xl font-bold text-foreground mb-4 line-clamp-2 break-words hyphens-auto">
+          {prize.name}
+        </h3>
+
+        {/* Meta Info - 3 separate lines */}
+        <div className="space-y-2 mb-4 text-sm">
+          <div className="flex flex-wrap gap-x-2">
+            <span className="text-muted-foreground">{t('card.sparte')}:</span>
+            <span className="font-medium text-foreground">{getDiscipline()}</span>
+          </div>
+          <div className="flex flex-wrap gap-x-2">
+            <span className="text-muted-foreground">{t('card.age')}:</span>
+            <span className="font-medium text-foreground">{getAgeDisplay()}</span>
+          </div>
+          <div className="flex flex-wrap gap-x-2">
+            <span className="text-muted-foreground">{t('card.requirement')}:</span>
+            <span className="font-medium text-foreground">{getRequirement()}</span>
+          </div>
+        </div>
+
+        {/* Prize Amount Highlight */}
+        <div className="bg-accent/10 rounded-lg p-3 mb-4">
+          <span className="text-sm text-muted-foreground">{t('card.prizeLabel')}:</span>
+          <div className="font-display text-xl font-bold text-accent">
+            {prize.prizeAmount && prize.prizeAmount > 0 
+              ? formatCurrency(prize.prizeAmount, prize.currency, language)
+              : t('card.noInfo')}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-border">
+          <div className="flex items-center gap-2">
+            {/* Precise Location */}
+            {getPreciseLocation() && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {getPreciseLocation()}
+              </span>
+            )}
+            {/* Country Badge */}
+            <Badge variant="secondary" className="text-xs">
+              {getCountryFlag(prize.country)} {prize.country}
             </Badge>
           </div>
-        )}
-
-        {/* Content wrapper with blur effect for non-pro */}
-        <div className={`${!canAccess ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
-
-          {/* TITLE - with proper word break for mobile */}
-          <h3 className="font-display text-base md:text-lg font-bold text-foreground mb-3 break-words hyphens-auto">
-            {prize.name}
-          </h3>
-
-          {/* META BLOCK - 3 SEPARATE LINES */}
-          <div className="text-xs md:text-sm text-muted-foreground mb-4 space-y-1.5">
-            {/* Line 1: Sparte */}
-            <div>
-              {t('calendar.sparte')}: <span className="text-foreground">{prize.sparte || t('calendar.allAreas')}</span>
-            </div>
-            
-            {/* Line 2: Alter */}
-            <div>
-              {t('calendar.age')}: <span className="text-foreground">{getAgeDisplay()}</span>
-            </div>
-            
-            {/* Line 3: Voraussetzung */}
-            <div>
-              {t('calendar.requirement')}: <span className="text-foreground">{getRequirement(prize.requirements) === 'Keine' ? t('calendar.none') : getRequirement(prize.requirements)}</span>
-            </div>
-          </div>
-
-          {/* HIGHLIGHT: Preis / Leistung (REQUIRED) */}
-          <div className="bg-accent/10 rounded-lg px-2.5 md:px-3 py-2 md:py-2.5 mb-4">
-            <div className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">{t('calendar.prizeLeistung')}:</div>
-            <span className="font-bold text-foreground text-sm md:text-base break-words">
-              {prize.benefitDetails || t('calendar.onRequest')}
-            </span>
-          </div>
-
-          {/* FOOTER: Precise Location + Country Badge (left) + Details Button (right) */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Precise location text (if available) */}
-              {getPreciseLocation(prize.region) && (
-                <span className="text-xs text-muted-foreground font-medium">
-                  {getPreciseLocation(prize.region)}
-                </span>
-              )}
-              {/* Country Badge */}
-              <Badge variant="outline" className="text-xs px-2 md:px-2.5 py-0.5 md:py-1 bg-muted/50 font-medium">
-                {countryBadge}
-              </Badge>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDetailsClick();
-              }}
-              className="text-xs h-8 md:h-9 px-3 md:px-4 min-h-[44px] md:min-h-0"
-            >
-              <ExternalLink className="h-3 w-3 md:h-4 md:w-4 mr-1.5" />
-              {t('calendar.details')}
-            </Button>
-          </div>
+          
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-primary font-semibold h-8 md:h-9 px-3 md:px-4 min-h-[44px]"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isLocked) onClick();
+            }}
+          >
+            {t('card.details')}
+          </Button>
         </div>
-
-        {/* Lock overlay for non-pro users */}
-        {!canAccess && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none bg-background/40">
-            <div className="bg-background/90 backdrop-blur-sm rounded-lg p-3 md:p-4 shadow-lg flex flex-col items-center gap-2">
-              <Lock className="h-6 w-6 md:h-8 md:w-8 text-accent" />
-              <span className="text-xs md:text-sm font-semibold text-foreground">{t('calendar.proOnly')}</span>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Unlock Button for locked cards */}
-      {!canAccess && (
-        <div className="px-3 md:px-4 pb-3 md:pb-4">
-          <Button
-            className="w-full gradient-gold text-primary font-semibold border-0 text-xs md:text-sm h-8 md:h-10"
+      {/* Lock Overlay for non-Pro users when deadline > 7 days */}
+      {isLocked && (
+        <div 
+          className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Lock className="h-10 w-10 text-muted-foreground mb-3" />
+          <p className="text-sm font-semibold text-foreground mb-3">{t('card.proOnly')}</p>
+          <Button 
+            size="sm" 
+            className="gradient-gold text-primary font-semibold border-0"
             onClick={handleUnlock}
           >
-            <Lock className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-            {t('calendar.unlock')}
+            <Crown className="h-4 w-4 mr-2" />
+            {t('card.unlock')}
           </Button>
         </div>
       )}
-    </div>
+    </article>
   );
 }

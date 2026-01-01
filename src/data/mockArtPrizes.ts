@@ -223,22 +223,12 @@ export function getCategoryColor(category: Category): string {
   return colors[category] || 'bg-gray-100 text-gray-800';
 }
 
-// Active filter button colors
+// Active filter button colors - ALL BLUE for consistency
 export function getCategoryFilterColor(category: Category | 'all', isActive: boolean): string {
   if (!isActive) return '';
   
-  if (category === 'all') return 'bg-primary text-primary-foreground';
-  
-  const colors: Record<Category, string> = {
-    'Förderung': 'bg-blue-600 text-white hover:bg-blue-700',
-    'Residenz': 'bg-green-600 text-white hover:bg-green-700',
-    'Wettbewerb': 'bg-orange-500 text-white hover:bg-orange-600',
-    'Kunstpreis': 'bg-yellow-500 text-yellow-900 hover:bg-yellow-600',
-    'Stipendium': 'bg-purple-600 text-white hover:bg-purple-700',
-    'Ausstellung': 'bg-black text-white hover:bg-gray-800',
-    'Kunst am Bau': 'bg-gray-600 text-white hover:bg-gray-700',
-  };
-  return colors[category] || 'bg-gray-600 text-white';
+  // All active states use the same blue color for consistency
+  return 'bg-[hsl(220,60%,45%)] text-white hover:bg-[hsl(220,60%,40%)]';
 }
 
 export function isDeadlineSoon(deadline: string): boolean {
