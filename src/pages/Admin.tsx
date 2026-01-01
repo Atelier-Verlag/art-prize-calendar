@@ -44,6 +44,7 @@ export default function Admin() {
     datenschutz: '',
     disclaimer: '',
   });
+  const [activeContentKey, setActiveContentKey] = useState<ContentKey>('impressum');
   const [saving, setSaving] = useState(false);
   const [loadingContent, setLoadingContent] = useState(true);
   const [scraperRunning, setScraperRunning] = useState(false);
@@ -148,13 +149,22 @@ export default function Admin() {
   }, [canUseBackend]);
 
   const handleSave = async (key: ContentKey) => {
+    if (!canUseBackend) {
+      toast({
+        title: 'Nicht erlaubt',
+        description: 'Zum Speichern musst du als Admin eingeloggt sein.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSaving(true);
-    
+
     const { error } = await supabase
       .from('site_content' as any)
       .update({ content: contents[key] })
       .eq('key', key);
-    
+
     if (error) {
       console.error('Error saving content:', error);
       toast({
@@ -168,7 +178,7 @@ export default function Admin() {
         description: `${key.charAt(0).toUpperCase() + key.slice(1)} wurde aktualisiert.`,
       });
     }
-    
+
     setSaving(false);
   };
 
@@ -585,7 +595,11 @@ export default function Admin() {
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="impressum" className="space-y-6">
+            <Tabs
+              value={activeContentKey}
+              onValueChange={(v) => setActiveContentKey(v as ContentKey)}
+              className="space-y-6"
+            >
               <TabsList className="grid w-full grid-cols-3">
                 {contentSections.map((section) => (
                   <TabsTrigger key={section.key} value={section.key}>
@@ -594,37 +608,43 @@ export default function Admin() {
                 ))}
               </TabsList>
 
-              {contentSections.map((section) => (
-                <TabsContent key={section.key} value={section.key}>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{section.title} bearbeiten</CardTitle>
-                      <CardDescription>{section.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <Textarea
-                        value={contents[section.key]}
-                        onChange={(e) => setContents(prev => ({ 
-                          ...prev, 
-                          [section.key]: e.target.value 
-                        }))}
-                        placeholder={`Geben Sie hier den Inhalt für ${section.title} ein...`}
-                        className="min-h-[400px] font-mono text-sm"
-                      />
-                      <div className="flex justify-end">
-                        <Button
-                          onClick={() => handleSave(section.key)}
-                          disabled={saving}
-                          className="gradient-gold text-primary font-semibold border-0"
-                        >
-                          <Save className="h-4 w-4 mr-2" />
-                          {saving ? 'Speichern...' : 'Speichern'}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              ))}
+              <TabsContent value={activeContentKey}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>
+                      {contentSections.find((s) => s.key === activeContentKey)?.title} bearbeiten
+                    </CardTitle>
+                    <CardDescription>
+                      {contentSections.find((s) => s.key === activeContentKey)?.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Textarea
+                      value={contents[activeContentKey]}
+                      onChange={(e) =>
+                        setContents((prev) => ({
+                          ...prev,
+                          [activeContentKey]: e.target.value,
+                        }))
+                      }
+                      placeholder={`Geben Sie hier den Inhalt für ${
+                        contentSections.find((s) => s.key === activeContentKey)?.title
+                      } ein...`}
+                      className="min-h-[400px] font-mono text-sm"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() => handleSave(activeContentKey)}
+                        disabled={saving}
+                        className="gradient-gold text-primary font-semibold border-0"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Speichern...' : 'Speichern'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </main>
