@@ -149,15 +149,6 @@ export default function Admin() {
   }, [canUseBackend]);
 
   const handleSave = async (key: ContentKey) => {
-    if (!canUseBackend) {
-      toast({
-        title: 'Nicht erlaubt',
-        description: 'Zum Speichern musst du als Admin eingeloggt sein.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setSaving(true);
 
     const { error } = await supabase
@@ -169,7 +160,7 @@ export default function Admin() {
       console.error('Error saving content:', error);
       toast({
         title: 'Fehler',
-        description: 'Inhalt konnte nicht gespeichert werden.',
+        description: 'Inhalt konnte nicht gespeichert werden: ' + error.message,
         variant: 'destructive',
       });
     } else {
