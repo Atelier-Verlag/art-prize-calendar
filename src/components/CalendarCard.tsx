@@ -58,16 +58,8 @@ function getRequirement(requirements: string[] | null): string {
   return requirements[0];
 }
 
-// Check if prize is older than 5 days (using deadline > 60 days as proxy)
-function isOlderThan5Days(deadline: string): boolean {
-  const deadlineDate = new Date(deadline);
-  const today = new Date();
-  const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  return diffDays > 60;
-}
-
 export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardProps) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { user, startCheckout } = useAuth();
   const navigate = useNavigate();
   
@@ -76,9 +68,9 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
   const isDeadlineUrgent = daysUntilDeadline >= 0 && daysUntilDeadline < 7;
   const categoryColorClass = getCategoryColor(prize.category);
   
-  // Paywall logic
-  const isOld = isOlderThan5Days(prize.deadline);
-  const canAccess = isProUser || !isOld;
+  // PAYWALL LOGIC: Deadline > 7 days = LOCKED, <= 7 days = FREE
+  const isLocked = daysUntilDeadline > 7;
+  const canAccess = isProUser || !isLocked;
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -124,11 +116,11 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
       {/* COLORED HEADER BAR - FINAL DESIGN */}
       <div className={`${headerBarColorClass} px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between`}>
         <span className="text-white text-xs md:text-sm font-semibold">
-          {prize.category}
+          {t(`category.${prize.category}`) || prize.category}
         </span>
         <div className="text-white text-right">
           <span className="text-[10px] md:text-xs font-bold uppercase tracking-wide block leading-tight">
-            Deadline
+            {t('calendar.deadline')}
           </span>
           <span className="text-sm md:text-base font-extrabold leading-tight">
             {format(deadlineDate, 'dd.MM.yyyy', { locale: de })}
@@ -143,7 +135,7 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
           <div className="mb-3">
             <Badge className="bg-destructive border-0 font-bold animate-pulse-soft text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 flex items-center gap-1 md:gap-1.5 w-fit">
               <ThumbsDown className="w-3 h-3 md:w-4 md:h-4 text-black fill-black stroke-[2.5]" />
-              <span className="text-destructive-foreground">{prize.fee} € Gebühr!</span>
+              <span className="text-destructive-foreground">{prize.fee} € {t('calendar.feeWarning')}!</span>
             </Badge>
           </div>
         )}
@@ -156,28 +148,29 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
             {prize.name}
           </h3>
 
-          {/* META BLOCK - flex wrap for mobile */}
-          <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs md:text-sm text-muted-foreground mb-4">
-            {/* Sparte */}
-            <div className="min-w-fit">
-              Sparte: <span className="text-foreground">{prize.sparte || 'Alle Bereiche'}</span>
+          {/* META BLOCK - 3 SEPARATE LINES */}
+          <div className="text-xs md:text-sm text-muted-foreground mb-4 space-y-1.5">
+            {/* Line 1: Sparte */}
+            <div>
+              {t('calendar.sparte')}: <span className="text-foreground">{prize.sparte || t('calendar.allAreas')}</span>
             </div>
             
-            {/* Alter */}
-            <div className="min-w-fit">
-              Alter: <span className="text-foreground">{getAgeDisplay()}</span>
+            {/* Line 2: Alter */}
+            <div>
+              {t('calendar.age')}: <span className="text-foreground">{getAgeDisplay()}</span>
             </div>
             
-            {/* Voraussetzung (NEW - replaces Örtliche Begrenzung) */}
-            <div className="w-full">
-              Voraussetzung: <span className="text-foreground">{getRequirement(prize.requirements)}</span>
+            {/* Line 3: Voraussetzung */}
+            <div>
+              {t('calendar.requirement')}: <span className="text-foreground">{getRequirement(prize.requirements) === 'Keine' ? t('calendar.none') : getRequirement(prize.requirements)}</span>
             </div>
           </div>
 
-          {/* HIGHLIGHT: Dotierung/Leistung (REQUIRED) */}
+          {/* HIGHLIGHT: Preis / Leistung (REQUIRED) */}
           <div className="bg-accent/10 rounded-lg px-2.5 md:px-3 py-2 md:py-2.5 mb-4">
+            <div className="text-[10px] md:text-xs text-muted-foreground font-medium mb-0.5">{t('calendar.prizeLeistung')}:</div>
             <span className="font-bold text-foreground text-sm md:text-base break-words">
-              {prize.benefitDetails || 'Auf Anfrage'}
+              {prize.benefitDetails || t('calendar.onRequest')}
             </span>
           </div>
 
@@ -205,7 +198,7 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
               className="text-xs h-8 md:h-9 px-3 md:px-4 min-h-[44px] md:min-h-0"
             >
               <ExternalLink className="h-3 w-3 md:h-4 md:w-4 mr-1.5" />
-              Details ansehen
+              {t('calendar.details')}
             </Button>
           </div>
         </div>
@@ -215,7 +208,7 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
           <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none bg-background/40">
             <div className="bg-background/90 backdrop-blur-sm rounded-lg p-3 md:p-4 shadow-lg flex flex-col items-center gap-2">
               <Lock className="h-6 w-6 md:h-8 md:w-8 text-accent" />
-              <span className="text-xs md:text-sm font-semibold text-foreground">Nur für Mitglieder</span>
+              <span className="text-xs md:text-sm font-semibold text-foreground">{t('calendar.proOnly')}</span>
             </div>
           </div>
         )}
@@ -229,7 +222,7 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
             onClick={handleUnlock}
           >
             <Lock className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-            Freischalten
+            {t('calendar.unlock')}
           </Button>
         </div>
       )}

@@ -41,7 +41,7 @@ export function Header() {
               Kunstpreis<span className="text-accent">kalender</span>
             </span>
             <span className="text-[10px] md:text-xs text-muted-foreground leading-tight">
-              Powered by Zeitschrift Atelier
+              powered by Zeitschrift atelier
             </span>
           </div>
         </a>

@@ -7,17 +7,18 @@ import { PrizeDetailModal } from './PrizeDetailModal';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
 import { getCategoryFilterColor, type Category } from '@/data/mockArtPrizes';
+import { addMonths, isBefore } from 'date-fns';
 
 // Static navigation filters in exact order
-const awardTypeFilters: { value: Category | 'all'; label: string }[] = [
-  { value: 'all', label: 'Alle' },
-  { value: 'Kunstpreis', label: 'Kunstpreise' },
-  { value: 'Wettbewerb', label: 'Wettbewerbe' },
-  { value: 'Stipendium', label: 'Stipendien' },
-  { value: 'Förderung', label: 'Förderung' },
-  { value: 'Residenz', label: 'Residencies' },
-  { value: 'Ausstellung', label: 'Ausstellungsmöglichkeiten' },
-  { value: 'Kunst am Bau', label: 'Kunst am Bau' },
+const awardTypeFilters: { value: Category | 'all'; labelKey: string }[] = [
+  { value: 'all', labelKey: 'filter.all' },
+  { value: 'Kunstpreis', labelKey: 'filter.Kunstpreis' },
+  { value: 'Wettbewerb', labelKey: 'filter.Wettbewerb' },
+  { value: 'Stipendium', labelKey: 'filter.Stipendium' },
+  { value: 'Förderung', labelKey: 'filter.Förderung' },
+  { value: 'Residenz', labelKey: 'filter.Residenz' },
+  { value: 'Ausstellung', labelKey: 'filter.Ausstellung' },
+  { value: 'Kunst am Bau', labelKey: 'filter.Kunst am Bau' },
 ];
 
 export function CalendarGrid() {
@@ -28,7 +29,15 @@ export function CalendarGrid() {
 
   const { data: prizes, isLoading } = useArtPrizes(false);
 
+  // Filter: only show deadlines within next 6 months
+  const sixMonthsFromNow = addMonths(new Date(), 6);
+  
   const filteredPrizes = (prizes || []).filter((prize) => {
+    // Filter by deadline within 6 months
+    const deadlineDate = new Date(prize.deadline);
+    if (!isBefore(deadlineDate, sixMonthsFromNow)) return false;
+    
+    // Filter by category
     if (selectedCategory === 'all') return true;
     return prize.category === selectedCategory;
   });
@@ -63,7 +72,7 @@ export function CalendarGrid() {
                   onClick={() => setSelectedCategory(filter.value)}
                   className={isActive ? activeColorClass : ''}
                 >
-                  {filter.label}
+                  {t(filter.labelKey)}
                 </Button>
               );
             })}
