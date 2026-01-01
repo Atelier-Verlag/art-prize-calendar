@@ -31,27 +31,31 @@ function getCountryBadge(country: string): string {
   return 'International';
 }
 
-// Derive örtliche Begrenzung (local restriction) from region
-function getLocalRestriction(region: string): string {
+// Derive precise location from region (for footer display)
+function getPreciseLocation(region: string): string | null {
   const r = region?.toLowerCase() || '';
   
-  // Check for specific regions/cities
+  // Check for specific regions/cities - return exact location
   if (r.includes('berlin')) return 'Berlin';
   if (r.includes('nrw') || r.includes('nordrhein')) return 'NRW';
   if (r.includes('bayern')) return 'Bayern';
   if (r.includes('hamburg')) return 'Hamburg';
-  if (r.includes('tirol')) return 'Tirol';
+  if (r.includes('köln')) return 'Stadt Köln';
+  if (r.includes('münchen')) return 'München';
+  if (r.includes('tirol')) return 'Region Tirol';
   if (r.includes('kärnten')) return 'Kärnten';
   if (r.includes('wien')) return 'Wien';
   if (r.includes('zürich')) return 'Zürich';
-  if (r.includes('international')) return 'Keine';
   
-  // If country-wide
-  if (r.includes('deutschland') || r.includes('bundesweit')) return 'Bundesweit';
-  if (r.includes('österreich')) return 'Bundesweit (AT)';
-  if (r.includes('schweiz')) return 'Landesweit (CH)';
-  
-  return 'Bundesweit';
+  // No specific restriction - return null
+  return null;
+}
+
+// Get requirement from requirements array
+function getRequirement(requirements: string[] | null): string {
+  if (!requirements || requirements.length === 0) return 'Keine';
+  // Return first requirement as main display
+  return requirements[0];
 }
 
 // Check if prize is older than 5 days (using deadline > 60 days as proxy)
@@ -86,7 +90,6 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
   };
 
   const countryBadge = getCountryBadge(prize.country);
-  const localRestriction = getLocalRestriction(prize.region);
 
   // Format age display
   const getAgeDisplay = () => {
@@ -118,14 +121,16 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
         ${!canAccess ? 'opacity-90' : ''}
       `}
     >
-      {/* COLORED HEADER BAR */}
-      <div className={`${headerBarColorClass} px-3 md:px-4 py-2 md:py-2.5 flex items-center justify-between`}>
+      {/* COLORED HEADER BAR - FINAL DESIGN */}
+      <div className={`${headerBarColorClass} px-3 md:px-4 py-2.5 md:py-3 flex items-center justify-between`}>
         <span className="text-white text-xs md:text-sm font-semibold">
           {prize.category}
         </span>
         <div className="text-white text-right">
-          <span className="text-[10px] md:text-xs opacity-80 block leading-tight">Deadline</span>
-          <span className="text-xs md:text-sm font-bold leading-tight">
+          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wide block leading-tight">
+            Deadline
+          </span>
+          <span className="text-sm md:text-base font-extrabold leading-tight">
             {format(deadlineDate, 'dd.MM.yyyy', { locale: de })}
           </span>
         </div>
@@ -146,26 +151,26 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
         {/* Content wrapper with blur effect for non-pro */}
         <div className={`${!canAccess ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
 
-          {/* TITLE */}
-          <h3 className="font-display text-base md:text-lg font-bold text-foreground line-clamp-2 mb-3">
+          {/* TITLE - with proper word break for mobile */}
+          <h3 className="font-display text-base md:text-lg font-bold text-foreground mb-3 break-words hyphens-auto">
             {prize.name}
           </h3>
 
-          {/* META BLOCK */}
-          <div className="space-y-1 md:space-y-1.5 text-xs md:text-sm text-muted-foreground mb-4">
-            {/* Line 1: Sparte */}
-            <div className="truncate">
+          {/* META BLOCK - flex wrap for mobile */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs md:text-sm text-muted-foreground mb-4">
+            {/* Sparte */}
+            <div className="min-w-fit">
               Sparte: <span className="text-foreground">{prize.sparte || 'Alle Bereiche'}</span>
             </div>
             
-            {/* Line 2: Alter */}
-            <div>
+            {/* Alter */}
+            <div className="min-w-fit">
               Alter: <span className="text-foreground">{getAgeDisplay()}</span>
             </div>
             
-            {/* Line 3: Örtliche Begrenzung */}
-            <div className="truncate">
-              Örtliche Begrenzung: <span className="text-foreground">{localRestriction}</span>
+            {/* Voraussetzung (NEW - replaces Örtliche Begrenzung) */}
+            <div className="w-full">
+              Voraussetzung: <span className="text-foreground">{getRequirement(prize.requirements)}</span>
             </div>
           </div>
 
@@ -176,11 +181,20 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
             </span>
           </div>
 
-          {/* FOOTER: Country Badge (left) + Details Button (right) */}
+          {/* FOOTER: Precise Location + Country Badge (left) + Details Button (right) */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant="outline" className="text-xs px-2 md:px-2.5 py-0.5 md:py-1 bg-muted/50 font-medium">
-              {countryBadge}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Precise location text (if available) */}
+              {getPreciseLocation(prize.region) && (
+                <span className="text-xs text-muted-foreground font-medium">
+                  {getPreciseLocation(prize.region)}
+                </span>
+              )}
+              {/* Country Badge */}
+              <Badge variant="outline" className="text-xs px-2 md:px-2.5 py-0.5 md:py-1 bg-muted/50 font-medium">
+                {countryBadge}
+              </Badge>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -188,9 +202,9 @@ export function CalendarCard({ prize, isProUser, onDetailsClick }: CalendarCardP
                 e.stopPropagation();
                 onDetailsClick();
               }}
-              className="text-xs h-7 md:h-8 px-2 md:px-3"
+              className="text-xs h-8 md:h-9 px-3 md:px-4 min-h-[44px] md:min-h-0"
             >
-              <ExternalLink className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+              <ExternalLink className="h-3 w-3 md:h-4 md:w-4 mr-1.5" />
               Details ansehen
             </Button>
           </div>
