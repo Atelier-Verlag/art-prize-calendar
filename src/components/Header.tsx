@@ -6,6 +6,7 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Menu, X, Calendar, Archive, Sparkles, CreditCard, LogOut, Crown, Shield, User } from 'lucide-react';
+import { PricingModal } from '@/components/PricingModal';
 
 export function Header() {
   const { t } = useLanguage();
@@ -13,6 +14,7 @@ export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   const isOnIndexPage = location.pathname === '/';
 
@@ -115,9 +117,10 @@ export function Header() {
               <Button 
                 size="sm" 
                 className="hidden sm:inline-flex gradient-gold text-primary font-semibold border-0"
-                onClick={() => navigate('/auth')}
+                onClick={() => setShowPricingModal(true)}
               >
-                Pro
+                <Crown className="h-4 w-4 mr-1" />
+                {t('premium.upgrade')}
               </Button>
             </>
           )}
@@ -211,11 +214,12 @@ export function Header() {
                     size="sm" 
                     className="w-full gradient-gold text-primary font-semibold border-0"
                     onClick={() => {
-                      navigate('/auth');
+                      setShowPricingModal(true);
                       setIsMenuOpen(false);
                     }}
                   >
-                    Pro
+                    <Crown className="h-4 w-4 mr-2" />
+                    {t('premium.upgrade')}
                   </Button>
                 </>
               )}
@@ -223,6 +227,12 @@ export function Header() {
           </nav>
         </div>
       )}
+
+      {/* Pricing Modal */}
+      <PricingModal 
+        isOpen={showPricingModal} 
+        onClose={() => setShowPricingModal(false)} 
+      />
     </header>
   );
 }

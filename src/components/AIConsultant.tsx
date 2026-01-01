@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Send, FileText, Route, Lock, Crown } from 'lucide-react';
+import { PricingModal } from '@/components/PricingModal';
+import { ComingSoonModal } from '@/components/ComingSoonModal';
 
 export function AIConsultant() {
   const { t } = useLanguage();
-  const { user, isProUser, startCheckout } = useAuth();
-  const navigate = useNavigate();
+  const { isProUser } = useAuth();
   const [prompt, setPrompt] = useState('');
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState('');
 
   const features = [
     {
@@ -27,10 +30,15 @@ export function AIConsultant() {
   ];
 
   const handleUpgrade = () => {
-    if (!user) {
-      navigate('/auth');
+    setShowPricingModal(true);
+  };
+
+  const handleFeatureClick = (featureTitle: string) => {
+    if (isProUser) {
+      setSelectedFeature(featureTitle);
+      setShowComingSoonModal(true);
     } else {
-      startCheckout('price_1RjZ68D70Qs4RhIVb39PiHqZ');
+      setShowPricingModal(true);
     }
   };
 
@@ -52,10 +60,14 @@ export function AIConsultant() {
             </p>
           </div>
 
-          {/* Feature cards */}
+          {/* Feature cards - clickable */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             {features.map((feature) => (
-              <Card key={feature.titleKey} className="hover:shadow-card-hover transition-all duration-300">
+              <Card 
+                key={feature.titleKey} 
+                className="hover:shadow-card-hover transition-all duration-300 cursor-pointer"
+                onClick={() => handleFeatureClick(t(feature.titleKey))}
+              >
                 <CardHeader>
                   <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
                     <feature.icon className="h-6 w-6 text-accent" />
@@ -118,6 +130,17 @@ export function AIConsultant() {
           </Card>
         </div>
       </div>
+
+      {/* Modals */}
+      <PricingModal 
+        isOpen={showPricingModal} 
+        onClose={() => setShowPricingModal(false)} 
+      />
+      <ComingSoonModal 
+        isOpen={showComingSoonModal} 
+        onClose={() => setShowComingSoonModal(false)}
+        featureName={selectedFeature}
+      />
     </section>
   );
 }

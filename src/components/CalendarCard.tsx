@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCategoryColor, formatDeadline, getDaysUntilDeadline } from '@/data/mockArtPrizes';
@@ -7,6 +7,7 @@ import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, Lock, Crown } from 'lucide-react';
+import { PricingModal } from '@/components/PricingModal';
 
 interface CalendarCardProps {
   prize: ArtPrize;
@@ -16,8 +17,7 @@ interface CalendarCardProps {
 
 export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
   const { t, language } = useLanguage();
-  const { user, startCheckout } = useAuth();
-  const navigate = useNavigate();
+  const [showPricingModal, setShowPricingModal] = useState(false);
   
   const categoryClass = getCategoryColor(prize.category);
   const daysLeft = getDaysUntilDeadline(prize.deadline);
@@ -40,9 +40,9 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
     return countryMap[country] || '🌍';
   };
 
-  // Get display value for "Sparte" (discipline)
+  // Get display value for "Sparte" (discipline) - use sparte field, NOT category
   const getDiscipline = () => {
-    return prize.category || 'Gemischt';
+    return prize.sparte || 'Alle Bereiche';
   };
 
   // Get age display
@@ -77,11 +77,7 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user) {
-      navigate('/auth');
-    } else {
-      startCheckout('price_1RjZ68D70Qs4RhIVb39PiHqZ');
-    }
+    setShowPricingModal(true);
   };
 
   return (
@@ -127,11 +123,11 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
 
         {/* Prize Amount Highlight */}
         <div className="bg-accent/10 rounded-lg p-3 mb-4">
-          <span className="text-sm text-muted-foreground">{t('card.prizeLabel')}:</span>
-          <div className="font-display text-xl font-bold text-accent">
+          <span className="text-sm font-semibold text-foreground">{t('card.prizeLabel')}:</span>
+          <div className="font-display text-xl font-bold text-[#000000] dark:text-foreground">
             {prize.prizeAmount && prize.prizeAmount > 0 
               ? formatCurrency(prize.prizeAmount, prize.currency, language)
-              : t('card.noInfo')}
+              : (prize.benefitDetails || t('card.noInfo'))}
           </div>
         </div>
 
@@ -183,6 +179,12 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
           </Button>
         </div>
       )}
+
+      {/* Pricing Modal */}
+      <PricingModal 
+        isOpen={showPricingModal} 
+        onClose={() => setShowPricingModal(false)} 
+      />
     </article>
   );
 }
