@@ -82,24 +82,30 @@ export type Database = {
       }
       profiles: {
         Row: {
+          company_name: string | null
           created_at: string
           id: string
           is_admin: boolean
           is_pro_user: boolean
+          subscription_status: string
           updated_at: string
         }
         Insert: {
+          company_name?: string | null
           created_at?: string
           id: string
           is_admin?: boolean
           is_pro_user?: boolean
+          subscription_status?: string
           updated_at?: string
         }
         Update: {
+          company_name?: string | null
           created_at?: string
           id?: string
           is_admin?: boolean
           is_pro_user?: boolean
+          subscription_status?: string
           updated_at?: string
         }
         Relationships: []
@@ -173,6 +179,45 @@ export type Database = {
           id?: string
           key?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tenders: {
+        Row: {
+          budget: string | null
+          category: string | null
+          country: string | null
+          created_at: string
+          deadline: string | null
+          description: string | null
+          id: string
+          is_premium: boolean
+          source_url: string | null
+          title: string
+        }
+        Insert: {
+          budget?: string | null
+          category?: string | null
+          country?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          is_premium?: boolean
+          source_url?: string | null
+          title: string
+        }
+        Update: {
+          budget?: string | null
+          category?: string | null
+          country?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          is_premium?: boolean
+          source_url?: string | null
+          title?: string
         }
         Relationships: []
       }
