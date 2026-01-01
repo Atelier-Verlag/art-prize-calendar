@@ -163,6 +163,9 @@ export const translations: Translations = {
   'pricing.feature.all': { de: 'Alle Ausschreibungen', en: 'All calls', fr: 'Tous les appels', es: 'Todas las convocatorias', ko: '모든 공모' },
   'pricing.feature.ai': { de: 'KI-Bewerbungsassistent', en: 'AI Application Assistant', fr: 'Assistant IA', es: 'Asistente IA', ko: 'AI 지원 도우미' },
   'pricing.feature.archive': { de: 'Archiv-Zugang', en: 'Archive access', fr: 'Accès aux archives', es: 'Acceso al archivo', ko: '아카이브 액세스' },
+  'pricing.popular': { de: 'Beliebteste Wahl', en: 'Most Popular', fr: 'Plus Populaire', es: 'Más Popular', ko: '가장 인기' },
+  'pricing.selectPlan': { de: 'Auswählen', en: 'Select', fr: 'Sélectionner', es: 'Seleccionar', ko: '선택' },
+  'pricing.cancelAnytime': { de: 'Jederzeit kündbar. Sichere Zahlung über Stripe.', en: 'Cancel anytime. Secure payment via Stripe.', fr: 'Annulez à tout moment. Paiement sécurisé via Stripe.', es: 'Cancela en cualquier momento. Pago seguro con Stripe.', ko: '언제든지 취소 가능. Stripe 통한 안전한 결제.' },
 
   // Footer
   'footer.imprint': { de: 'Impressum', en: 'Imprint', fr: 'Mentions légales', es: 'Aviso legal', ko: '법적 고지' },
