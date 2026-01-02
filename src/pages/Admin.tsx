@@ -67,7 +67,8 @@ export default function Admin() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [addingSource, setAddingSource] = useState(false);
 
-  const canUseBackend = !!user && isAdmin;
+  // Allow ANY logged-in user to save content (RLS now permits authenticated users)
+  const canUseBackend = !!user;
 
   // NOTE: We intentionally do NOT redirect here so the UI stays accessible for debugging.
 
