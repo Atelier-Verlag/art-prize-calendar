@@ -6,9 +6,8 @@ import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Lock, Crown, AlertTriangle } from 'lucide-react';
+import { MapPin, Lock, Crown, AlertTriangle, ThumbsDown } from 'lucide-react';
 import { PricingModal } from '@/components/PricingModal';
-
 interface CalendarCardProps {
   prize: ArtPrize;
   onClick: () => void;
@@ -30,8 +29,9 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
   const hasAccess = isAdmin || isProUser || isUrgent;
   const isLocked = !hasAccess;
 
-  // Black Sheep warning check
-  const isBlackSheep = trustStatus === 'warning';
+  // Black Sheep warning check - prizes with entry fees are flagged
+  const hasEntryFee = prize.fee !== null && prize.fee !== undefined && prize.fee > 0;
+  const isBlackSheep = trustStatus === 'warning' || hasEntryFee;
 
   // Get country flag emoji based on country code
   const getCountryFlag = (country: string) => {
@@ -97,11 +97,18 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
     >
       {/* Black Sheep Warning Banner - ALWAYS VISIBLE for safety */}
       {isBlackSheep && (
-        <div className="bg-destructive text-destructive-foreground px-4 py-2 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          <span className="text-sm font-bold">
-            {language === 'de' ? 'Achtung: Mögliche Kostenfalle!' : 'Warning: Potential Scam!'}
-          </span>
+        <div className="bg-destructive text-destructive-foreground px-4 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ThumbsDown className="h-5 w-5" />
+            <span className="text-sm font-bold">
+              {language === 'de' ? 'Achtung: Teilnahmegebühr!' : 'Warning: Entry Fee!'}
+            </span>
+          </div>
+          {hasEntryFee && (
+            <Badge variant="destructive" className="bg-red-900 text-white font-bold px-3 py-1">
+              {formatCurrency(prize.fee!, prize.currency, language)}
+            </Badge>
+          )}
         </div>
       )}
 
