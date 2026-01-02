@@ -110,27 +110,50 @@ export default function Auth() {
 
     setIsSubmitting(true);
 
-    // Use the update-password route - Supabase will append hash fragments with the token
-    const redirectUrl = `${window.location.origin}/auth/update-password`;
+    try {
+      // Use window.location.origin to ensure correct domain
+      const redirectUrl = `${window.location.origin}/auth/update-password`;
+      console.log('Password reset redirect URL:', redirectUrl);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
 
-    if (error) {
+      console.log('Password reset response:', { data, error });
+
+      if (error) {
+        console.error('Password reset error:', error);
+        
+        // Show specific error messages
+        let errorMessage = error.message;
+        if (error.message.includes('rate limit') || error.message.includes('security purposes')) {
+          errorMessage = language === 'de' 
+            ? 'Bitte warten Sie einen Moment, bevor Sie es erneut versuchen.' 
+            : 'Please wait a moment before trying again.';
+        }
+        
+        toast({
+          title: language === 'de' ? 'Fehler' : 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: language === 'de' ? 'E-Mail gesendet!' : 'Email sent!',
+          description: language === 'de'
+            ? 'Bitte prüfen Sie Ihren Posteingang (auch den Spam-Ordner).'
+            : 'Please check your inbox (including spam folder).',
+        });
+        setView('login');
+        setEmail('');
+      }
+    } catch (err: any) {
+      console.error('Unexpected error during password reset:', err);
       toast({
-        title: language === 'de' ? 'Fehler' : 'Error',
-        description: error.message,
+        title: language === 'de' ? 'Unerwarteter Fehler' : 'Unexpected Error',
+        description: err?.message || 'Unknown error occurred',
         variant: 'destructive',
       });
-    } else {
-      toast({
-        title: language === 'de' ? 'E-Mail gesendet!' : 'Email sent!',
-        description: language === 'de' 
-          ? 'Eine E-Mail zum Zurücksetzen des Passworts wurde gesendet.' 
-          : 'A password reset email has been sent.',
-      });
-      setView('login');
     }
 
     setIsSubmitting(false);
