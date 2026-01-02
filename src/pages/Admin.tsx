@@ -83,27 +83,26 @@ export default function Admin() {
           terms: '',
         };
 
-        // Fetch each content key separately to ensure correct mapping
-        for (const key of ['impressum', 'datenschutz', 'disclaimer', 'terms'] as ContentKey[]) {
-          const { data, error } = await supabase
-            .from('site_content' as any)
-            .select('content')
-            .eq('key', key)
-            .maybeSingle();
+        // Fetch all content in one query
+        const { data, error } = await supabase
+          .from('site_content')
+          .select('key, content');
 
-          if (error) {
-            console.error(`Error loading ${key}:`, error);
-            continue;
-          }
-
-          if (data && (data as any).content) {
-            contentMap[key] = (data as any).content;
-            console.log(`Loaded ${key}:`, contentMap[key].substring(0, 50) + '...');
+        if (error) {
+          console.error('Error loading site content:', error);
+        } else if (data) {
+          // Map each row to contentMap
+          for (const row of data) {
+            const key = row.key as ContentKey;
+            if (key in contentMap) {
+              contentMap[key] = row.content || '';
+              console.log(`[Admin] Loaded ${key}: ${contentMap[key].substring(0, 50)}...`);
+            }
           }
         }
 
         setContents(contentMap);
-        console.log('All content loaded:', Object.keys(contentMap).map(k => `${k}: ${contentMap[k as ContentKey].substring(0, 30)}...`));
+        console.log('[Admin] All content loaded');
       } catch (err) {
         console.error('Error loading content:', err);
       } finally {
