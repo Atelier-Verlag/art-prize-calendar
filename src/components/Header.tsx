@@ -66,17 +66,18 @@ export function Header() {
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
           
+          {/* UNCONDITIONAL ADMIN BUTTON - Always visible for EVERYONE */}
+          <Button
+            size="sm"
+            className="inline-flex bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+            onClick={() => navigate('/admin')}
+          >
+            <Shield className="h-4 w-4 mr-1" />
+            Admin Login
+          </Button>
+
           {user ? (
             <>
-              {/* FORCED ADMIN BUTTON - Always visible, prominent styling, NO hidden classes */}
-              <Button
-                size="sm"
-                className="inline-flex bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
-                onClick={() => navigate('/admin')}
-              >
-                <Shield className="h-4 w-4 mr-1" />
-                Admin
-              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -196,6 +197,18 @@ export function Header() {
                 </>
               ) : (
                 <>
+                  {/* UNCONDITIONAL Admin button on mobile too */}
+                  <Button
+                    size="sm"
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+                    onClick={() => {
+                      navigate('/admin');
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Admin Login
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
