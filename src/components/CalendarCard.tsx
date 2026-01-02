@@ -6,7 +6,7 @@ import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Lock, Crown, AlertTriangle, ThumbsDown, Info } from 'lucide-react';
+import { MapPin, Lock, Crown, AlertTriangle, ThumbsDown } from 'lucide-react';
 import {
   HoverCard,
   HoverCardContent,
@@ -102,56 +102,64 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
     >
       {/* Black Sheep Warning Banner - ALWAYS VISIBLE for safety */}
       {isBlackSheep && (
-        <div className="bg-destructive text-destructive-foreground px-4 py-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <ThumbsDown className="h-5 w-5" />
-            <span className="text-sm font-bold">
-              {language === 'de' ? 'Achtung: Teilnahmegebühr!' : 'Warning: Entry Fee!'}
-            </span>
-          </div>
-          {hasEntryFee && (
-            <HoverCard openDelay={100} closeDelay={200}>
-              <HoverCardTrigger asChild>
+        <HoverCard openDelay={0} closeDelay={300}>
+          <HoverCardTrigger asChild>
+            <div className="bg-destructive text-destructive-foreground px-4 py-3 flex items-center justify-between gap-2 cursor-help hover:bg-destructive/90 transition-colors">
+              <div className="flex items-center gap-2">
+                <ThumbsDown className="h-5 w-5" />
+                <span className="text-sm font-bold">
+                  {language === 'de' ? 'Achtung: Teilnahmegebühr!' : 'Warning: Entry Fee!'}
+                </span>
+              </div>
+              {hasEntryFee && (
                 <Badge 
                   variant="destructive" 
-                  className="bg-red-900 text-white font-bold px-3 py-1 cursor-help flex items-center gap-1"
+                  className="bg-red-900 text-white font-bold px-3 py-1"
                 >
                   {formatCurrency(prize.fee!, prize.currency, language)}
-                  <Info className="h-3 w-3" />
                 </Badge>
-              </HoverCardTrigger>
-              <HoverCardContent className="w-80 p-4" side="bottom" align="end">
-                <div className="space-y-3 text-sm">
-                  <p>
-                    Weitere Informationen zu der Grauzone in der Kunstszene erfahren Sie regelmäßig aktuell in der Zeitschrift{' '}
-                    <a 
-                      href="https://www.atelier-verlag.de" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary underline hover:text-primary/80 font-medium"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      atelier
-                    </a>{' '}
-                    in der Rubrik "Grauzone".
-                  </p>
-                  <p>
-                    Eine Liste über die schon dort behandelten Grauzonen-Fälle, in denen die wenig künstlerfreundlichen Konditionen von Organisatoren untersucht wurden, finden Sie unter:{' '}
-                    <a 
-                      href="https://www.atelier-verlag.de/grauzone-archiv" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary underline hover:text-primary/80 font-medium"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Grauzone Archiv
-                    </a>
-                  </p>
-                </div>
-              </HoverCardContent>
-            </HoverCard>
-          )}
-        </div>
+              )}
+            </div>
+          </HoverCardTrigger>
+          <HoverCardContent 
+            className="w-96 p-5 z-50" 
+            side="top" 
+            align="center"
+            sideOffset={8}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-destructive font-semibold text-base">
+                <ThumbsDown className="h-5 w-5" />
+                <span>Grauzone Warnung</span>
+              </div>
+              <p className="text-base leading-relaxed">
+                Weitere Informationen zu der Grauzone in der Kunstszene erfahren Sie regelmäßig aktuell in der Zeitschrift{' '}
+                <a 
+                  href="https://www.atelier-verlag.de" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80 font-semibold"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  atelier (www.atelier-verlag.de)
+                </a>{' '}
+                in der Rubrik "Grauzone".
+              </p>
+              <p className="text-base leading-relaxed">
+                Eine Liste über die schon dort behandelten Grauzonen-Fälle, in denen die wenig künstlerfreundlichen Konditionen von Organisatoren untersucht wurden, finden Sie unter:{' '}
+                <a 
+                  href="https://www.atelier-verlag.de/grauzone-archiv" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80 font-semibold"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Grauzone Archiv
+                </a>
+              </p>
+            </div>
+          </HoverCardContent>
+        </HoverCard>
       )}
 
       {/* Header Bar - Color based on urgency */}
