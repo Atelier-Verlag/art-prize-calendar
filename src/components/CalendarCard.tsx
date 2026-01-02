@@ -119,58 +119,49 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
       </div>
 
       {/* Card Body */}
-      <div className="p-4 md:p-5 relative">
-        {/* Title - blurred if locked */}
-        <h3 className={`font-display text-lg md:text-xl font-bold text-foreground line-clamp-2 break-words hyphens-auto mb-4 ${
-          isLocked ? 'blur-md select-none' : ''
-        }`}>
-          {prize.name}
-        </h3>
+      <div className="p-4 md:p-5 relative min-h-[220px]">
+        {/* All content rendered but blurred when locked - "milk glass" effect */}
+        <div className={`${isLocked ? 'blur-[6px] select-none pointer-events-none' : ''}`}>
+          {/* Title */}
+          <h3 className="font-display text-lg md:text-xl font-bold text-foreground line-clamp-2 break-words hyphens-auto mb-4">
+            {prize.name}
+          </h3>
 
-        {/* Meta Info - blurred if locked */}
-        <div
-          className={`space-y-2 mb-4 text-sm transition-all ${
-            isLocked ? 'blur-md select-none pointer-events-none' : ''
-          }`}
-          aria-hidden={isLocked}
-        >
-          <div className="flex flex-wrap gap-x-2">
-            <span className="text-muted-foreground">{t('card.sparte')}:</span>
-            <span className="font-medium text-foreground">{getDiscipline()}</span>
+          {/* Meta Info */}
+          <div className="space-y-2 mb-4 text-sm">
+            <div className="flex flex-wrap gap-x-2">
+              <span className="text-muted-foreground">{t('card.sparte')}:</span>
+              <span className="font-medium text-foreground">{getDiscipline()}</span>
+            </div>
+            <div className="flex flex-wrap gap-x-2">
+              <span className="text-muted-foreground">{t('card.age')}:</span>
+              <span className="font-medium text-foreground">{getAgeDisplay()}</span>
+            </div>
+            <div className="flex flex-wrap gap-x-2">
+              <span className="text-muted-foreground">{t('card.requirement')}:</span>
+              <span className="font-medium text-foreground">{getRequirement()}</span>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-x-2">
-            <span className="text-muted-foreground">{t('card.age')}:</span>
-            <span className="font-medium text-foreground">{getAgeDisplay()}</span>
-          </div>
-          <div className="flex flex-wrap gap-x-2">
-            <span className="text-muted-foreground">{t('card.requirement')}:</span>
-            <span className="font-medium text-foreground">{getRequirement()}</span>
+
+          {/* Prize Amount Highlight */}
+          <div className="bg-accent/10 rounded-lg p-3 mb-4">
+            <span className="text-sm font-semibold text-foreground">{t('card.prizeLabel')}:</span>
+            <div className="font-display text-xl font-bold text-foreground">
+              {prize.prizeAmount && prize.prizeAmount > 0
+                ? formatCurrency(prize.prizeAmount, prize.currency, language)
+                : prize.benefitDetails || t('card.noInfo')}
+            </div>
           </div>
         </div>
 
-        {/* Prize Amount Highlight - blurred if locked */}
-        <div
-          className={`bg-accent/10 rounded-lg p-3 mb-4 transition-all ${
-            isLocked ? 'blur-md select-none pointer-events-none' : ''
-          }`}
-          aria-hidden={isLocked}
-        >
-          <span className="text-sm font-semibold text-foreground">{t('card.prizeLabel')}:</span>
-          <div className="font-display text-xl font-bold text-foreground">
-            {prize.prizeAmount && prize.prizeAmount > 0
-              ? formatCurrency(prize.prizeAmount, prize.currency, language)
-              : prize.benefitDetails || t('card.noInfo')}
-          </div>
-        </div>
-
-        {/* LOCK OVERLAY - Covers ENTIRE card content including title */}
+        {/* LOCK OVERLAY - Positioned on top of blurred content */}
         {isLocked && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm z-20">
-            <div className="flex flex-col items-center gap-3 p-4">
-              <div className="bg-muted rounded-full p-4 shadow-lg">
-                <Lock className="h-8 w-8 text-muted-foreground" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+            <div className="flex flex-col items-center gap-3 p-4 bg-background/40 rounded-xl backdrop-blur-[2px]">
+              <div className="bg-primary rounded-full p-4 shadow-lg">
+                <Lock className="h-8 w-8 text-primary-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground font-medium text-center">
+              <p className="text-base font-bold text-foreground text-center">
                 {language === 'de' ? 'Premium-Inhalt' : 'Premium Content'}
               </p>
               <Button
