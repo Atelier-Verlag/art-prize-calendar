@@ -29,9 +29,9 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
   const handleSelectPlan = async (priceId: string) => {
     if (!user) {
-      // Redirect to auth with return URL so they come back after login
+      // Pass priceId to auth page so checkout continues after login/signup
       onClose();
-      navigate('/auth?returnTo=/');
+      navigate(`/auth?priceId=${encodeURIComponent(priceId)}&returnTo=/`);
       return;
     }
     
