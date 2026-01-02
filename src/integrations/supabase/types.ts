@@ -24,6 +24,7 @@ export type Database = {
           currency: string
           deadline: string
           description: string
+          eligibility_restriction: string | null
           fee: number | null
           id: string
           is_archived: boolean
@@ -45,6 +46,7 @@ export type Database = {
           currency?: string
           deadline: string
           description: string
+          eligibility_restriction?: string | null
           fee?: number | null
           id?: string
           is_archived?: boolean
@@ -66,6 +68,7 @@ export type Database = {
           currency?: string
           deadline?: string
           description?: string
+          eligibility_restriction?: string | null
           fee?: number | null
           id?: string
           is_archived?: boolean
