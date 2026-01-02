@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Pencil, Trash2, Award, RefreshCw, ExternalLink } from 'lucide-react';
+import { Loader2, Pencil, Trash2, Award, RefreshCw, ExternalLink, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -34,6 +34,24 @@ interface ArtPrize {
   eligibility_restriction: string | null;
 }
 
+const emptyPrize: Omit<ArtPrize, 'id' | 'created_at'> = {
+  name: '',
+  organizer: '',
+  deadline: '',
+  website: '',
+  description: '',
+  is_archived: false,
+  category: 'Kunstpreis',
+  region: 'Deutschland',
+  country: 'Deutschland',
+  prize_amount: null,
+  fee: null,
+  age_min: null,
+  age_max: null,
+  requirements: [],
+  eligibility_restriction: null,
+};
+
 export function ArtPrizesManager() {
   const { toast } = useToast();
   const [prizes, setPrizes] = useState<ArtPrize[]>([]);
@@ -42,6 +60,9 @@ export function ArtPrizesManager() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newPrize, setNewPrize] = useState<Omit<ArtPrize, 'id' | 'created_at'>>(emptyPrize);
+  const [creating, setCreating] = useState(false);
 
   const loadPrizes = async () => {
     setLoading(true);
@@ -158,6 +179,56 @@ export function ArtPrizesManager() {
     setDeleting(null);
   };
 
+  const handleCreate = async () => {
+    if (!newPrize.name || !newPrize.deadline || !newPrize.website) {
+      toast({
+        title: 'Fehlende Pflichtfelder',
+        description: 'Bitte füllen Sie Titel, Deadline und Website aus.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCreating(true);
+    const { data, error } = await supabase
+      .from('art_prizes')
+      .insert({
+        name: newPrize.name,
+        organizer: newPrize.organizer,
+        deadline: newPrize.deadline,
+        website: newPrize.website,
+        description: newPrize.description,
+        category: newPrize.category as any,
+        region: newPrize.region,
+        country: newPrize.country,
+        prize_amount: newPrize.prize_amount,
+        fee: newPrize.fee,
+        eligibility_restriction: newPrize.eligibility_restriction,
+        is_archived: false,
+        is_short_term: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating prize:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Ausschreibung konnte nicht erstellt werden.',
+        variant: 'destructive',
+      });
+    } else {
+      setPrizes(prev => [data as ArtPrize, ...prev]);
+      toast({
+        title: 'Erstellt',
+        description: 'Neue Ausschreibung wurde hinzugefügt.',
+      });
+      setIsCreateDialogOpen(false);
+      setNewPrize(emptyPrize);
+    }
+    setCreating(false);
+  };
+
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -173,15 +244,24 @@ export function ArtPrizesManager() {
               </CardDescription>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadPrizes}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Aktualisieren
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Neue Ausschreibung
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadPrizes}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Aktualisieren
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -394,6 +474,182 @@ export function ArtPrizesManager() {
                 </>
               ) : (
                 'Speichern'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Neue Ausschreibung erstellen</DialogTitle>
+            <DialogDescription>
+              Fügen Sie manuell eine neue Ausschreibung hinzu.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-name">Titel *</Label>
+              <Input
+                id="create-name"
+                placeholder="z.B. 'Kunstpreis der Stadt München 2025'"
+                value={newPrize.name}
+                onChange={(e) => setNewPrize({ ...newPrize, name: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-organizer">Veranstalter</Label>
+              <Input
+                id="create-organizer"
+                placeholder="z.B. 'Kulturamt München'"
+                value={newPrize.organizer}
+                onChange={(e) => setNewPrize({ ...newPrize, organizer: e.target.value })}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-category">Kategorie</Label>
+                <Select
+                  value={newPrize.category}
+                  onValueChange={(value) => setNewPrize({ ...newPrize, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Kunstpreis">Kunstpreis</SelectItem>
+                    <SelectItem value="Wettbewerb">Wettbewerb</SelectItem>
+                    <SelectItem value="grant">Stipendium</SelectItem>
+                    <SelectItem value="painting">Malerei</SelectItem>
+                    <SelectItem value="photography">Fotografie</SelectItem>
+                    <SelectItem value="sculpture">Skulptur</SelectItem>
+                    <SelectItem value="residency">Residenz</SelectItem>
+                    <SelectItem value="mixed">Gemischt</SelectItem>
+                    <SelectItem value="media">Medienkunst</SelectItem>
+                    <SelectItem value="performance">Performance</SelectItem>
+                    <SelectItem value="exhibition">Ausstellung</SelectItem>
+                    <SelectItem value="public_art">Kunst im öffentl. Raum</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="create-deadline">Deadline *</Label>
+                <Input
+                  id="create-deadline"
+                  type="date"
+                  value={newPrize.deadline}
+                  onChange={(e) => setNewPrize({ ...newPrize, deadline: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-country">Land</Label>
+                <Input
+                  id="create-country"
+                  placeholder="z.B. 'Deutschland'"
+                  value={newPrize.country}
+                  onChange={(e) => setNewPrize({ ...newPrize, country: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="create-region">Region</Label>
+                <Input
+                  id="create-region"
+                  placeholder="z.B. 'Bayern'"
+                  value={newPrize.region}
+                  onChange={(e) => setNewPrize({ ...newPrize, region: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-website">Website *</Label>
+              <Input
+                id="create-website"
+                type="url"
+                placeholder="https://..."
+                value={newPrize.website}
+                onChange={(e) => setNewPrize({ ...newPrize, website: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-prize">Preisgeld (€)</Label>
+                <Input
+                  id="create-prize"
+                  type="number"
+                  placeholder="z.B. 5000"
+                  value={newPrize.prize_amount ?? ''}
+                  onChange={(e) => setNewPrize({ ...newPrize, prize_amount: e.target.value ? Number(e.target.value) : null })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="create-fee">Teilnahmegebühr (€)</Label>
+                <Input
+                  id="create-fee"
+                  type="number"
+                  placeholder="z.B. 25"
+                  value={newPrize.fee ?? ''}
+                  onChange={(e) => setNewPrize({ ...newPrize, fee: e.target.value ? Number(e.target.value) : null })}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-description">Beschreibung</Label>
+              <Textarea
+                id="create-description"
+                placeholder="Beschreibung der Ausschreibung..."
+                value={newPrize.description}
+                onChange={(e) => setNewPrize({ ...newPrize, description: e.target.value })}
+                className="min-h-[80px]"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-eligibility">Teilnahmebeschränkung (lokal)</Label>
+              <Input
+                id="create-eligibility"
+                placeholder="z.B. 'Nur für in Köln lebende Künstler'"
+                value={newPrize.eligibility_restriction || ''}
+                onChange={(e) => setNewPrize({ ...newPrize, eligibility_restriction: e.target.value || null })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Für lokale Einschränkungen im DACH-Raum (Stadt, Bundesland, Residenz). Leer lassen wenn offen.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={handleCreate} 
+              disabled={creating}
+              className="bg-primary text-primary-foreground"
+            >
+              {creating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Erstellen...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Erstellen
+                </>
               )}
             </Button>
           </DialogFooter>
