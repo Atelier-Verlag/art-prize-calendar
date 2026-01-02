@@ -119,23 +119,16 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
       </div>
 
       {/* Card Body */}
-      <div className="p-4 md:p-5">
-        {/* Title with Lock Badge if locked */}
-        <div className="flex items-start gap-2 mb-4">
-          <h3 className="font-display text-lg md:text-xl font-bold text-foreground line-clamp-2 break-words hyphens-auto flex-1">
-            {prize.name}
-          </h3>
-          {isLocked && (
-            <div className="shrink-0 bg-muted rounded-full p-1.5">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-            </div>
-          )}
-        </div>
+      <div className="p-4 md:p-5 relative">
+        {/* Title - ALWAYS visible as teaser */}
+        <h3 className="font-display text-lg md:text-xl font-bold text-foreground line-clamp-2 break-words hyphens-auto mb-4">
+          {prize.name}
+        </h3>
 
         {/* Meta Info - blurred if locked */}
         <div
           className={`space-y-2 mb-4 text-sm transition-all ${
-            isLocked ? 'blur-[3px] select-none pointer-events-none' : ''
+            isLocked ? 'blur-md select-none pointer-events-none' : ''
           }`}
           aria-hidden={isLocked}
         >
@@ -156,7 +149,7 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
         {/* Prize Amount Highlight - blurred if locked */}
         <div
           className={`bg-accent/10 rounded-lg p-3 mb-4 transition-all ${
-            isLocked ? 'blur-[3px] select-none pointer-events-none' : ''
+            isLocked ? 'blur-md select-none pointer-events-none' : ''
           }`}
           aria-hidden={isLocked}
         >
@@ -168,8 +161,30 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
           </div>
         </div>
 
+        {/* LOCK OVERLAY - Centered on top of blurred content */}
+        {isLocked && (
+          <div className="absolute inset-0 top-[60px] flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm z-10">
+            <div className="flex flex-col items-center gap-3 p-4">
+              <div className="bg-muted rounded-full p-4 shadow-lg">
+                <Lock className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground font-medium text-center">
+                {language === 'de' ? 'Premium-Inhalt' : 'Premium Content'}
+              </p>
+              <Button
+                size="sm"
+                className="gradient-gold text-primary font-semibold border-0 min-h-[44px] px-6"
+                onClick={handleUnlock}
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                {language === 'de' ? 'Jetzt freischalten' : 'Unlock Now'}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-border">
+        <div className={`flex items-center justify-between pt-3 border-t border-border ${isLocked ? 'blur-md' : ''}`}>
           <div className="flex items-center gap-2">
             {/* Precise Location */}
             {getPreciseLocation() && (
@@ -184,17 +199,8 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
             </Badge>
           </div>
 
-          {/* CTA Button */}
-          {isLocked ? (
-            <Button
-              size="sm"
-              className="gradient-gold text-primary font-semibold border-0 h-8 md:h-9 px-3 md:px-4 min-h-[44px]"
-              onClick={handleUnlock}
-            >
-              <Crown className="h-4 w-4 mr-2" />
-              {language === 'de' ? 'Jetzt Pro werden' : 'Go Pro'}
-            </Button>
-          ) : (
+          {/* CTA Button - hidden when locked since overlay has button */}
+          {!isLocked && (
             <Button
               variant="ghost"
               size="sm"
