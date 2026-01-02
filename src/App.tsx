@@ -17,6 +17,7 @@ import Nutzungsbedingungen from "./pages/Nutzungsbedingungen";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
+import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/update-password" element={<UpdatePassword />} />
                 <Route path="/archiv" element={<Archive />} />
                 <Route path="/impressum" element={<Impressum />} />
                 <Route path="/datenschutz" element={<Datenschutz />} />
