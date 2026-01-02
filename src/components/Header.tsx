@@ -68,11 +68,10 @@ export function Header() {
           
           {user ? (
             <>
-              {/* FORCED: Admin Dashboard button for ANY logged-in user */}
+              {/* FORCED ADMIN BUTTON - Always visible, prominent styling, NO hidden classes */}
               <Button
-                variant="outline"
                 size="sm"
-                className="hidden sm:inline-flex border-destructive/50 text-destructive hover:bg-destructive/10"
+                className="inline-flex bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
                 onClick={() => navigate('/admin')}
               >
                 <Shield className="h-4 w-4 mr-1" />
