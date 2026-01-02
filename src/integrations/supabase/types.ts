@@ -194,6 +194,7 @@ export type Database = {
           is_premium: boolean
           source_url: string | null
           title: string
+          trust_status: string
         }
         Insert: {
           budget?: string | null
@@ -206,6 +207,7 @@ export type Database = {
           is_premium?: boolean
           source_url?: string | null
           title: string
+          trust_status?: string
         }
         Update: {
           budget?: string | null
@@ -218,6 +220,7 @@ export type Database = {
           is_premium?: boolean
           source_url?: string | null
           title?: string
+          trust_status?: string
         }
         Relationships: []
       }
