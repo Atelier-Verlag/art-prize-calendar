@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Loader2, ArrowLeft } from 'lucide-react';
+import { Calendar, Loader2, ArrowLeft, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+type AuthView = 'login' | 'signup' | 'forgot-password';
 
 export default function Auth() {
   const { user, signIn, signUp, loading } = useAuth();
@@ -20,6 +23,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [view, setView] = useState<AuthView>('login');
 
   // Redirect if already logged in
   useEffect(() => {
@@ -93,10 +97,108 @@ export default function Auth() {
     setIsSubmitting(false);
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      toast({
+        title: language === 'de' ? 'E-Mail erforderlich' : 'Email required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const redirectUrl = `${window.location.origin}/auth/update-password`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+
+    if (error) {
+      toast({
+        title: language === 'de' ? 'Fehler' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: language === 'de' ? 'E-Mail gesendet!' : 'Email sent!',
+        description: language === 'de' 
+          ? 'Eine E-Mail zum Zurücksetzen des Passworts wurde gesendet.' 
+          : 'A password reset email has been sent.',
+      });
+      setView('login');
+    }
+
+    setIsSubmitting(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Forgot Password View
+  if (view === 'forgot-password') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
+        <div className="w-full max-w-md mb-4">
+          <button 
+            onClick={() => setView('login')}
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+            <span>{language === 'de' ? 'Zurück zur Anmeldung' : 'Back to Login'}</span>
+          </button>
+        </div>
+
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-gold">
+                <Mail className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="font-display text-2xl">
+              {language === 'de' ? 'Passwort zurücksetzen' : 'Reset Password'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'de' 
+                ? 'Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen.' 
+                : 'Enter your email address and we will send you a reset link.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">{t('auth.email')}</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full gradient-gold text-primary font-semibold border-0"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                {language === 'de' ? 'Link senden' : 'Send Reset Link'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -155,6 +257,15 @@ export default function Auth() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                </div>
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => setView('forgot-password')}
+                    className="text-sm text-accent hover:underline"
+                  >
+                    {language === 'de' ? 'Passwort vergessen?' : 'Forgot password?'}
+                  </button>
                 </div>
                 <Button
                   type="submit"
