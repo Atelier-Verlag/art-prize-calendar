@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Loader2, ArrowLeft, KeyRound } from 'lucide-react';
+import { Loader2, ArrowLeft, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UpdatePassword() {
@@ -19,30 +19,72 @@ export default function UpdatePassword() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we have a valid recovery session
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // The user should have a session after clicking the recovery link
-      if (session) {
-        setIsValidSession(true);
-      }
-      setIsLoading(false);
-    };
+    let isMounted = true;
 
-    checkSession();
-
-    // Listen for auth state changes (recovery link clicked)
+    // Set up auth state listener FIRST (before any getSession calls)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, 'Session:', !!session);
+      
+      if (!isMounted) return;
+
       if (event === 'PASSWORD_RECOVERY') {
+        // This fires when user clicks the recovery link
+        setIsValidSession(true);
+        setIsLoading(false);
+        setErrorMessage(null);
+      } else if (event === 'SIGNED_IN' && session) {
+        // Also valid - user is signed in with the recovery token
+        setIsValidSession(true);
+        setIsLoading(false);
+        setErrorMessage(null);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
         setIsValidSession(true);
         setIsLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Check for hash fragments in the URL (Supabase sends tokens via hash)
+    const handleHashRecovery = async () => {
+      const hash = window.location.hash;
+      
+      // Check if we have recovery tokens in the hash
+      if (hash && (hash.includes('access_token') || hash.includes('type=recovery'))) {
+        console.log('Found recovery hash, letting Supabase process it...');
+        // Supabase will automatically pick up the hash and fire PASSWORD_RECOVERY event
+        // Give it a moment to process
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Check for existing session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (!isMounted) return;
+
+      if (error) {
+        console.error('Session error:', error);
+        setErrorMessage(error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (session) {
+        console.log('Valid session found');
+        setIsValidSession(true);
+      }
+      
+      setIsLoading(false);
+    };
+
+    // Small delay to let auth listener set up first
+    setTimeout(handleHashRecovery, 100);
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
