@@ -169,23 +169,38 @@ export default function Admin() {
     }
 
     setSaving(true);
+    console.log(`[Admin] Saving ${key} with content length: ${contents[key].length}`);
 
-    // Use upsert so saving works even if the row was deleted/missing.
-    const { error } = await supabase
-      .from('site_content' as any)
-      .upsert({ key, content: contents[key] }, { onConflict: 'key' as any });
+    try {
+      // Use upsert with explicit onConflict for the key column
+      const { data, error } = await supabase
+        .from('site_content')
+        .upsert(
+          { key, content: contents[key], updated_at: new Date().toISOString() },
+          { onConflict: 'key' }
+        )
+        .select();
 
-    if (error) {
-      console.error('Error saving content:', error);
+      if (error) {
+        console.error('Error saving content:', error);
+        toast({
+          title: 'Fehler beim Speichern',
+          description: `${key} konnte nicht gespeichert werden: ${error.message}`,
+          variant: 'destructive',
+        });
+      } else {
+        console.log(`[Admin] Successfully saved ${key}:`, data);
+        toast({
+          title: '✓ Gespeichert',
+          description: `${key.charAt(0).toUpperCase() + key.slice(1)} wurde erfolgreich aktualisiert.`,
+        });
+      }
+    } catch (err) {
+      console.error('Unexpected error saving content:', err);
       toast({
-        title: 'Fehler',
-        description: 'Inhalt konnte nicht gespeichert werden: ' + error.message,
+        title: 'Unerwarteter Fehler',
+        description: 'Ein unerwarteter Fehler ist aufgetreten.',
         variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Gespeichert',
-        description: `${key.charAt(0).toUpperCase() + key.slice(1)} wurde aktualisiert.`,
       });
     }
 
