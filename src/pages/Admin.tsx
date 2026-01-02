@@ -383,33 +383,51 @@ export default function Admin() {
 
         <main className="container py-16 md:py-24">
           <div className="max-w-4xl mx-auto">
-            {/* Top bar with back button and admin controls */}
-            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-              <Button
-                variant="outline"
-                onClick={() => navigate('/')}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Zurück zur Startseite
-              </Button>
-              
-              {/* Admin indicator and logout - ALWAYS VISIBLE */}
-              <div className="flex items-center gap-3">
-                <Badge className="bg-destructive/10 text-destructive border border-destructive/30 gap-1 font-semibold px-3 py-1.5">
-                  <Shield className="h-4 w-4" />
-                  ADMIN MODUS
-                </Badge>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  {loggingOut ? 'Abmelden...' : 'Abmelden'}
-                </Button>
+            {/* Admin Mode Banner - Prominent */}
+            <div className="bg-destructive/10 border-2 border-destructive/30 rounded-xl p-4 mb-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-destructive/20 flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="font-display font-bold text-destructive">ADMIN MODUS</p>
+                    <p className="text-sm text-muted-foreground">
+                      Sie bearbeiten die Website-Inhalte
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open('/', '_blank')}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <Globe className="h-4 w-4 mr-2" />
+                    Öffentliche Seite ansehen
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {loggingOut ? 'Abmelden...' : 'Abmelden'}
+                  </Button>
+                </div>
               </div>
             </div>
+
+            {/* Back button */}
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/')}
+              className="mb-6"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Zurück zur Startseite
+            </Button>
 
             <div className="flex items-center gap-3 mb-8">
               <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
