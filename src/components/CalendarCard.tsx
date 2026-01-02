@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCategoryColor, formatDeadline, getDaysUntilDeadline } from '@/data/mockArtPrizes';
@@ -7,28 +6,31 @@ import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Lock, Crown, LogIn } from 'lucide-react';
+import { MapPin, Lock, Crown, AlertTriangle } from 'lucide-react';
 import { PricingModal } from '@/components/PricingModal';
 
 interface CalendarCardProps {
   prize: ArtPrize;
   onClick: () => void;
   isProUser: boolean;
+  trustStatus?: 'verified' | 'neutral' | 'warning';
 }
 
-export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
+export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verified' }: CalendarCardProps) {
   const { t, language } = useLanguage();
   const { user, isAdmin } = useAuth();
-  const navigate = useNavigate();
   const [showPricingModal, setShowPricingModal] = useState(false);
 
   const categoryClass = getCategoryColor(prize.category);
   const daysLeft = getDaysUntilDeadline(prize.deadline);
   const isUrgent = daysLeft <= 7;
 
-  // Paid access: hide details for visitors who are not logged-in / not subscribed.
-  const hasAccess = !!user && (isProUser || isAdmin);
+  // Access: admins and pro users can see full details
+  const hasAccess = isAdmin || (user && isProUser);
   const isLocked = !hasAccess;
+
+  // Black Sheep warning check
+  const isBlackSheep = trustStatus === 'warning';
 
   // Get country flag emoji based on country code
   const getCountryFlag = (country: string) => {
@@ -81,22 +83,27 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    // Public visitors must log in first.
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-
-    // Logged-in non-pro users get upgrade prompt.
+    // Always open pricing modal - no redirect to login
     setShowPricingModal(true);
   };
 
   return (
     <article
-      className="group relative bg-card rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer border border-border"
+      className={`group relative bg-card rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer border ${
+        isBlackSheep ? 'border-destructive border-2' : 'border-border'
+      }`}
       onClick={isLocked ? undefined : onClick}
     >
+      {/* Black Sheep Warning Banner - ALWAYS VISIBLE for safety */}
+      {isBlackSheep && (
+        <div className="bg-destructive text-destructive-foreground px-4 py-2 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          <span className="text-sm font-bold">
+            {language === 'de' ? 'Achtung: Mögliche Kostenfalle!' : 'Warning: Potential Scam!'}
+          </span>
+        </div>
+      )}
+
       {/* Header Bar - Color based on urgency */}
       <div className={`${isUrgent ? 'bg-destructive' : 'bg-primary'} px-4 py-3 flex justify-between items-center`}>
         <span className="text-primary-foreground text-sm font-semibold uppercase tracking-wide">
@@ -112,15 +119,22 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
 
       {/* Card Body */}
       <div className="p-4 md:p-5">
-        {/* Title */}
-        <h3 className="font-display text-lg md:text-xl font-bold text-foreground mb-4 line-clamp-2 break-words hyphens-auto">
-          {prize.name}
-        </h3>
+        {/* Title with Lock Badge if locked */}
+        <div className="flex items-start gap-2 mb-4">
+          <h3 className="font-display text-lg md:text-xl font-bold text-foreground line-clamp-2 break-words hyphens-auto flex-1">
+            {prize.name}
+          </h3>
+          {isLocked && (
+            <div className="shrink-0 bg-muted rounded-full p-1.5">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+        </div>
 
-        {/* Meta Info - hidden/blurred if locked */}
+        {/* Meta Info - blurred if locked */}
         <div
-          className={`space-y-2 mb-4 text-sm ${
-            isLocked ? 'blur-sm select-none pointer-events-none' : ''
+          className={`space-y-2 mb-4 text-sm transition-all ${
+            isLocked ? 'blur-[3px] select-none pointer-events-none' : ''
           }`}
           aria-hidden={isLocked}
         >
@@ -138,10 +152,10 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
           </div>
         </div>
 
-        {/* Prize Amount Highlight - hidden/blurred if locked */}
+        {/* Prize Amount Highlight - blurred if locked */}
         <div
-          className={`bg-accent/10 rounded-lg p-3 mb-4 ${
-            isLocked ? 'blur-sm select-none pointer-events-none' : ''
+          className={`bg-accent/10 rounded-lg p-3 mb-4 transition-all ${
+            isLocked ? 'blur-[3px] select-none pointer-events-none' : ''
           }`}
           aria-hidden={isLocked}
         >
@@ -169,53 +183,31 @@ export function CalendarCard({ prize, onClick, isProUser }: CalendarCardProps) {
             </Badge>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-primary font-semibold h-8 md:h-9 px-3 md:px-4 min-h-[44px]"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isLocked) {
-                handleUnlock(e);
-                return;
-              }
-              onClick();
-            }}
-          >
-            {t('card.details')}
-          </Button>
+          {/* CTA Button */}
+          {isLocked ? (
+            <Button
+              size="sm"
+              className="gradient-gold text-primary font-semibold border-0 h-8 md:h-9 px-3 md:px-4 min-h-[44px]"
+              onClick={handleUnlock}
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              {language === 'de' ? 'Jetzt Pro werden' : 'Go Pro'}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-primary font-semibold h-8 md:h-9 px-3 md:px-4 min-h-[44px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+            >
+              {t('card.details')}
+            </Button>
+          )}
         </div>
       </div>
-
-      {/* Lock Overlay for visitors/non-pro */}
-      {isLocked && (
-        <div
-          className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Lock className="h-10 w-10 text-muted-foreground mb-3" />
-          <p className="text-sm font-semibold text-foreground mb-3">
-            {!user ? 'Einloggen um Details zu sehen' : t('card.proOnly')}
-          </p>
-          <Button
-            size="sm"
-            className="gradient-gold text-primary font-semibold border-0"
-            onClick={handleUnlock}
-          >
-            {!user ? (
-              <>
-                <LogIn className="h-4 w-4 mr-2" />
-                Einloggen
-              </>
-            ) : (
-              <>
-                <Crown className="h-4 w-4 mr-2" />
-                {t('card.unlock')}
-              </>
-            )}
-          </Button>
-        </div>
-      )}
 
       {/* Pricing Modal */}
       <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
