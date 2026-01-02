@@ -7,6 +7,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Footer } from "@/components/Footer";
+import { FloatingAdminButton } from "@/components/FloatingAdminButton";
 import Index from "./pages/Index";
 import Archive from "./pages/Archive";
 import Impressum from "./pages/Impressum";
@@ -45,6 +46,9 @@ const App = () => (
 
               {/* Global footer on every route */}
               <Footer />
+
+              {/* Floating Admin Button - visible for ANY logged-in user */}
+              <FloatingAdminButton />
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
