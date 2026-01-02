@@ -6,7 +6,12 @@ import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Lock, Crown, AlertTriangle, ThumbsDown } from 'lucide-react';
+import { MapPin, Lock, Crown, AlertTriangle, ThumbsDown, Info } from 'lucide-react';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 import { PricingModal } from '@/components/PricingModal';
 interface CalendarCardProps {
   prize: ArtPrize;
@@ -105,9 +110,46 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
             </span>
           </div>
           {hasEntryFee && (
-            <Badge variant="destructive" className="bg-red-900 text-white font-bold px-3 py-1">
-              {formatCurrency(prize.fee!, prize.currency, language)}
-            </Badge>
+            <HoverCard openDelay={100} closeDelay={200}>
+              <HoverCardTrigger asChild>
+                <Badge 
+                  variant="destructive" 
+                  className="bg-red-900 text-white font-bold px-3 py-1 cursor-help flex items-center gap-1"
+                >
+                  {formatCurrency(prize.fee!, prize.currency, language)}
+                  <Info className="h-3 w-3" />
+                </Badge>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80 p-4" side="bottom" align="end">
+                <div className="space-y-3 text-sm">
+                  <p>
+                    Weitere Informationen zu der Grauzone in der Kunstszene erfahren Sie regelmäßig aktuell in der Zeitschrift{' '}
+                    <a 
+                      href="https://www.atelier-verlag.de" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary underline hover:text-primary/80 font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      atelier
+                    </a>{' '}
+                    in der Rubrik "Grauzone".
+                  </p>
+                  <p>
+                    Eine Liste über die schon dort behandelten Grauzonen-Fälle, in denen die wenig künstlerfreundlichen Konditionen von Organisatoren untersucht wurden, finden Sie unter:{' '}
+                    <a 
+                      href="https://www.atelier-verlag.de/grauzone-archiv" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary underline hover:text-primary/80 font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Grauzone Archiv
+                    </a>
+                  </p>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
           )}
         </div>
       )}
