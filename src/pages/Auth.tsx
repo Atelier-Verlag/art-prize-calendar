@@ -110,6 +110,7 @@ export default function Auth() {
 
     setIsSubmitting(true);
 
+    // Use the update-password route - Supabase will append hash fragments with the token
     const redirectUrl = `${window.location.origin}/auth/update-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
