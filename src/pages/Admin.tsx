@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut, Calendar, Play } from 'lucide-react';
+import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut, Calendar } from 'lucide-react';
 import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -922,17 +922,19 @@ export default function Admin() {
                             />
                           </div>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => handleScanSource(source)}
                             disabled={scanningSourceId === source.id || !source.active}
-                            className="text-primary hover:text-primary hover:bg-primary/10"
-                            title="Jetzt scannen"
+                            className="text-primary border-primary hover:bg-primary hover:text-primary-foreground font-medium"
                           >
                             {scanningSourceId === source.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                Scannt...
+                              </>
                             ) : (
-                              <Play className="h-4 w-4" />
+                              'Jetzt scannen'
                             )}
                           </Button>
                           <Button
