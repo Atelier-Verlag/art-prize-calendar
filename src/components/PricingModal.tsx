@@ -1,3 +1,4 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +23,7 @@ interface PricingModalProps {
   onClose: () => void;
 }
 
-export function PricingModal({ isOpen, onClose }: PricingModalProps) {
+export const PricingModal = React.forwardRef<HTMLDivElement, PricingModalProps>(function PricingModal({ isOpen, onClose }, ref) {
   const { t, language } = useLanguage();
   const { user, startCheckout } = useAuth();
   const navigate = useNavigate();
@@ -161,4 +162,5 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       </DialogContent>
     </Dialog>
   );
-}
+});
+PricingModal.displayName = "PricingModal";
