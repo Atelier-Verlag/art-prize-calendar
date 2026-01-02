@@ -17,7 +17,7 @@ import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
-type ContentKey = 'impressum' | 'datenschutz' | 'disclaimer';
+type ContentKey = 'impressum' | 'datenschutz' | 'disclaimer' | 'terms';
 
 interface ScraperLog {
   id: string;
@@ -51,6 +51,7 @@ export default function Admin() {
     impressum: '',
     datenschutz: '',
     disclaimer: '',
+    terms: '',
   });
   const [activeContentKey, setActiveContentKey] = useState<ContentKey>('impressum');
   const [saving, setSaving] = useState(false);
@@ -79,10 +80,11 @@ export default function Admin() {
           impressum: '',
           datenschutz: '',
           disclaimer: '',
+          terms: '',
         };
 
         // Fetch each content key separately to ensure correct mapping
-        for (const key of ['impressum', 'datenschutz', 'disclaimer'] as ContentKey[]) {
+        for (const key of ['impressum', 'datenschutz', 'disclaimer', 'terms'] as ContentKey[]) {
           const { data, error } = await supabase
             .from('site_content' as any)
             .select('content')
@@ -366,6 +368,7 @@ export default function Admin() {
     { key: 'impressum', title: 'Impressum', description: 'Rechtliche Angaben gemäß § 5 TMG' },
     { key: 'datenschutz', title: 'Datenschutz', description: 'Datenschutzerklärung nach DSGVO' },
     { key: 'disclaimer', title: 'Disclaimer', description: 'Haftungsausschluss' },
+    { key: 'terms', title: 'Nutzungsbedingungen', description: 'AGB und Nutzungsbedingungen' },
   ];
 
   return (
@@ -433,7 +436,7 @@ export default function Admin() {
               onValueChange={(v) => setActiveContentKey(v as ContentKey)}
               className="space-y-6 mb-8"
             >
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 {contentSections.map((section) => (
                   <TabsTrigger key={section.key} value={section.key}>
                     {section.title}

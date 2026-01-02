@@ -1,6 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCategoryColor, formatDeadline } from '@/data/mockArtPrizes';
+import { getCategoryColor, formatDeadline, getDaysUntilDeadline } from '@/data/mockArtPrizes';
 import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import {
@@ -46,9 +46,12 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser, trustStatu
   if (!prize) return null;
 
   const categoryClass = getCategoryColor(prize.category);
+  const daysLeft = getDaysUntilDeadline(prize.deadline);
+  const isUrgent = daysLeft <= 7;
 
-  // Paid access: only admins/pro users can see tender details.
-  const canAccess = isAdmin || (user && isProUser);
+  // 7-DAY RULE: If deadline is within 7 days, show ALL details to EVERYONE (teaser)
+  // If deadline is more than 7 days away, lock for free users
+  const canAccess = isAdmin || isProUser || isUrgent;
 
   // Black Sheep warning check
   const isBlackSheep = trustStatus === 'warning';

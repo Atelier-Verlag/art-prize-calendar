@@ -9,7 +9,7 @@ export function Footer() {
     { key: 'footer.imprint', href: '/impressum' },
     { key: 'footer.privacy', href: '/datenschutz' },
     { key: 'footer.disclaimer', href: '/disclaimer' },
-    { label: 'Admin Login', href: '/admin' },
+    { key: 'footer.terms', href: '/nutzungsbedingungen' },
   ];
 
   return (
@@ -28,11 +28,11 @@ export function Footer() {
           <nav className="flex flex-wrap items-center justify-center gap-6">
             {links.map((link) => (
               <Link
-                key={link.key || link.label}
+                key={link.key}
                 to={link.href}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                {link.label || t(link.key)}
+                {t(link.key)}
               </Link>
             ))}
           </nav>

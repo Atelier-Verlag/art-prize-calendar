@@ -12,6 +12,7 @@ import Archive from "./pages/Archive";
 import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import Disclaimer from "./pages/Disclaimer";
+import Nutzungsbedingungen from "./pages/Nutzungsbedingungen";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/impressum" element={<Impressum />} />
                 <Route path="/datenschutz" element={<Datenschutz />} />
                 <Route path="/disclaimer" element={<Disclaimer />} />
+                <Route path="/nutzungsbedingungen" element={<Nutzungsbedingungen />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/profile" element={<Profile />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
