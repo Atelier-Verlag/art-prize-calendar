@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut, Calendar } from 'lucide-react';
+import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut, Calendar, Play } from 'lucide-react';
 import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -135,7 +135,7 @@ export default function Admin() {
   const [newSourceName, setNewSourceName] = useState('');
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [addingSource, setAddingSource] = useState(false);
-
+  const [scanningSourceId, setScanningSourceId] = useState<string | null>(null);
   // Allow ANY logged-in user to save content (RLS now permits authenticated users)
   const canUseBackend = !!user;
 
@@ -300,6 +300,37 @@ export default function Admin() {
       });
     } finally {
       setScraperRunning(false);
+    }
+  };
+
+  const handleScanSource = async (source: ScraperSource) => {
+    setScanningSourceId(source.id);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-prizes', {
+        body: { singleUrl: source.url, sourceName: source.name }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'Scan abgeschlossen',
+        description: `"${source.name}" wurde gescannt. ${data?.newPrizesCount || 0} neue Einträge gefunden.`,
+      });
+      
+      // Logs neu laden
+      await loadScraperLogs();
+    } catch (error) {
+      console.error('Error scanning source:', error);
+      toast({
+        title: 'Fehler',
+        description: `"${source.name}" konnte nicht gescannt werden.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setScanningSourceId(null);
     }
   };
 
@@ -880,7 +911,7 @@ export default function Admin() {
                             </a>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">
                               {source.active ? 'Aktiv' : 'Inaktiv'}
@@ -890,6 +921,20 @@ export default function Admin() {
                               onCheckedChange={(checked) => handleToggleSource(source.id, checked)}
                             />
                           </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleScanSource(source)}
+                            disabled={scanningSourceId === source.id || !source.active}
+                            className="text-primary hover:text-primary hover:bg-primary/10"
+                            title="Jetzt scannen"
+                          >
+                            {scanningSourceId === source.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Play className="h-4 w-4" />
+                            )}
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
