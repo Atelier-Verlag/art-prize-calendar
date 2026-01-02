@@ -178,6 +178,7 @@ export const translations: Translations = {
   'footer.imprint': { de: 'Impressum', en: 'Imprint', fr: 'Mentions légales', es: 'Aviso legal', ko: '법적 고지' },
   'footer.privacy': { de: 'Datenschutz', en: 'Privacy Policy', fr: 'Politique de confidentialité', es: 'Política de privacidad', ko: '개인정보 처리방침' },
   'footer.disclaimer': { de: 'Haftungsausschluss', en: 'Disclaimer', fr: 'Avertissement', es: 'Descargo', ko: '면책조항' },
+  'footer.terms': { de: 'Nutzungsbedingungen', en: 'Terms of Service', fr: 'Conditions d\'utilisation', es: 'Términos de servicio', ko: '이용약관' },
   'footer.sitemap': { de: 'Sitemap', en: 'Sitemap', fr: 'Plan du site', es: 'Mapa del sitio', ko: '사이트맵' },
 };
 

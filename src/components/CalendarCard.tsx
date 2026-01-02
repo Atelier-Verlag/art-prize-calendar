@@ -25,8 +25,9 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
   const daysLeft = getDaysUntilDeadline(prize.deadline);
   const isUrgent = daysLeft <= 7;
 
-  // Access: admins and pro users can see full details
-  const hasAccess = isAdmin || (user && isProUser);
+  // 7-DAY RULE: If deadline is within 7 days, show ALL details to EVERYONE (teaser)
+  // If deadline is more than 7 days away, lock for free users
+  const hasAccess = isAdmin || isProUser || isUrgent;
   const isLocked = !hasAccess;
 
   // Black Sheep warning check
