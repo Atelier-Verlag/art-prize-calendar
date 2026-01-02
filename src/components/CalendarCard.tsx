@@ -120,8 +120,10 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
 
       {/* Card Body */}
       <div className="p-4 md:p-5 relative">
-        {/* Title - ALWAYS visible as teaser */}
-        <h3 className="font-display text-lg md:text-xl font-bold text-foreground line-clamp-2 break-words hyphens-auto mb-4">
+        {/* Title - blurred if locked */}
+        <h3 className={`font-display text-lg md:text-xl font-bold text-foreground line-clamp-2 break-words hyphens-auto mb-4 ${
+          isLocked ? 'blur-md select-none' : ''
+        }`}>
           {prize.name}
         </h3>
 
@@ -161,9 +163,9 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
           </div>
         </div>
 
-        {/* LOCK OVERLAY - Centered on top of blurred content */}
+        {/* LOCK OVERLAY - Covers ENTIRE card content including title */}
         {isLocked && (
-          <div className="absolute inset-0 top-[60px] flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm z-10">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm z-20">
             <div className="flex flex-col items-center gap-3 p-4">
               <div className="bg-muted rounded-full p-4 shadow-lg">
                 <Lock className="h-8 w-8 text-muted-foreground" />
