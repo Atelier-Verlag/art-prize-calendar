@@ -245,18 +245,34 @@ serve(async (req) => {
   const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
+  // Parse request body for single URL mode
+  let singleUrl: string | null = null;
+  let sourceName: string | null = null;
+  try {
+    const body = await req.json();
+    singleUrl = body?.singleUrl || null;
+    sourceName = body?.sourceName || null;
+  } catch {
+    // No body or invalid JSON - run full scan
+  }
+
+  const isSingleUrlMode = !!singleUrl;
+
   // Log ID für spätere Updates
   let runningLogId: string | null = null;
 
   try {
-    logStep("🤖 Kunst-Ausschreibungs-Roboter gestartet");
+    const modeLabel = isSingleUrlMode ? `Einzelscan: ${sourceName || singleUrl}` : "Internationale Suche";
+    logStep(`🤖 Kunst-Ausschreibungs-Roboter gestartet - ${modeLabel}`);
 
     // Log-Eintrag erstellen: Running
     const { data: logEntry } = await supabaseClient
       .from("scraper_logs")
       .insert({
         status: "running",
-        message: "Kunst-Ausschreibungs-Roboter gestartet - Internationale Suche läuft...",
+        message: isSingleUrlMode 
+          ? `Einzelscan gestartet: ${sourceName || singleUrl}` 
+          : "Kunst-Ausschreibungs-Roboter gestartet - Internationale Suche läuft...",
         items_found: 0,
       })
       .select("id")
@@ -306,13 +322,27 @@ serve(async (req) => {
     // 2. SUCHE: Mit Tavily nach neuen Ausschreibungen suchen
     let allSearchResults: TavilyResult[] = [];
     
-    for (const query of SEARCH_QUERIES) {
+    if (isSingleUrlMode && singleUrl) {
+      // Single URL mode: search specifically for this URL/source
+      logStep(`Einzelscan für URL: ${singleUrl}`);
       try {
-        const results = await searchWithTavily(query, tavilyApiKey);
-        allSearchResults = allSearchResults.concat(results);
-        logStep(`Gefunden: ${results.length} Ergebnisse für "${query}"`);
+        // Search with the URL as query to find related content
+        const results = await searchWithTavily(`site:${new URL(singleUrl).hostname} Kunstpreis OR Wettbewerb OR Open Call 2026`, tavilyApiKey);
+        allSearchResults = results;
+        logStep(`Gefunden: ${results.length} Ergebnisse für ${sourceName || singleUrl}`);
       } catch (e) {
-        logStep(`Fehler bei Suche "${query}"`, { error: String(e) });
+        logStep(`Fehler bei Einzelscan`, { error: String(e) });
+      }
+    } else {
+      // Full scan mode: use all predefined search queries
+      for (const query of SEARCH_QUERIES) {
+        try {
+          const results = await searchWithTavily(query, tavilyApiKey);
+          allSearchResults = allSearchResults.concat(results);
+          logStep(`Gefunden: ${results.length} Ergebnisse für "${query}"`);
+        } catch (e) {
+          logStep(`Fehler bei Suche "${query}"`, { error: String(e) });
+        }
       }
     }
 
