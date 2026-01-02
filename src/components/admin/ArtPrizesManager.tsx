@@ -31,6 +31,7 @@ interface ArtPrize {
   age_min: number | null;
   age_max: number | null;
   requirements: string[];
+  eligibility_restriction: string | null;
 }
 
 export function ArtPrizesManager() {
@@ -106,6 +107,7 @@ export function ArtPrizesManager() {
         description: editingPrize.description,
         organizer: editingPrize.organizer,
         category: editingPrize.category as any,
+        eligibility_restriction: editingPrize.eligibility_restriction,
       })
       .eq('id', editingPrize.id);
 
@@ -357,8 +359,21 @@ export function ArtPrizesManager() {
                   id="edit-description"
                   value={editingPrize.description}
                   onChange={(e) => setEditingPrize({ ...editingPrize, description: e.target.value })}
-                  className="min-h-[100px]"
+                  className="min-h-[80px]"
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-eligibility">Teilnahmebeschränkung (lokal)</Label>
+                <Input
+                  id="edit-eligibility"
+                  placeholder="z.B. 'Nur für in Köln lebende Künstler'"
+                  value={editingPrize.eligibility_restriction || ''}
+                  onChange={(e) => setEditingPrize({ ...editingPrize, eligibility_restriction: e.target.value || null })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Für lokale Einschränkungen im DACH-Raum (Stadt, Bundesland, Residenz). Leer lassen wenn offen.
+                </p>
               </div>
             </div>
           )}

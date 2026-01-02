@@ -43,6 +43,7 @@ interface ExtractedPrize {
   category: string;
   fee: number | null;
   prize_amount: number | null;
+  eligibility_restriction: string | null;
   isDraft?: boolean;
 }
 
@@ -110,6 +111,14 @@ KATEGORIEN (STRIKT VERWENDEN):
 - "residency" = Künstlerresidenzen
 - "mixed" = Mehrere Medien oder nicht eindeutig zuordenbar
 
+ELIGIBILITY RESTRICTIONS (WICHTIG für DACH-Raum):
+Suche SPEZIELL nach lokalen Einschränkungen wie:
+- "Wohnsitz in...", "nur für Künstler aus...", "living in...", "born in..."
+- "nur für Bewerber aus...", "Tiroler Künstler", "Kölner Künstler"
+- Beschränkungen auf Bundesländer, Städte oder Regionen
+- "EU residents only", "German citizens", etc.
+Wenn gefunden, extrahiere diese in eligibility_restriction. Bei internationalen Ausschreibungen ohne Einschränkung: null
+
 Für jeden gefundenen Eintrag extrahiere:
 - name: Titel der Ausschreibung
 - deadline: Datum im Format YYYY-MM-DD (MUSS in der Zukunft liegen!)
@@ -120,7 +129,8 @@ Für jeden gefundenen Eintrag extrahiere:
 - country: Land (z.B. "Deutschland", "Österreich", "International")
 - category: STRIKT eine von: Kunstpreis, Wettbewerb, grant, painting, photography, sculpture, performance, media, residency, mixed
 - fee: Teilnahmegebühr in Euro (null wenn kostenlos oder unbekannt)
-- prize_amount: Preisgeld in Euro (null wenn unbekannt)`;
+- prize_amount: Preisgeld in Euro (null wenn unbekannt)
+- eligibility_restriction: Lokale Einschränkungen (z.B. "Nur für in Köln lebende Künstler", "Nur für Tiroler Künstler") oder null wenn offen`;
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -161,6 +171,7 @@ Für jeden gefundenen Eintrag extrahiere:
                       },
                       fee: { type: "number", nullable: true },
                       prize_amount: { type: "number", nullable: true },
+                      eligibility_restriction: { type: "string", nullable: true, description: "Lokale Einschränkungen wie 'Nur für Kölner Künstler' oder null" },
                     },
                     required: ["name", "deadline", "website", "description", "organizer", "region", "country", "category"],
                   },
@@ -215,6 +226,7 @@ function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
       category: "mixed" as const,
       fee: null,
       prize_amount: null,
+      eligibility_restriction: null,
       isDraft: true,
     }));
 }
@@ -376,6 +388,7 @@ serve(async (req) => {
               category: safeCategory,
               fee: prize.fee,
               prize_amount: prize.prize_amount,
+              eligibility_restriction: prize.eligibility_restriction,
               is_archived: false,
               is_short_term: false,
             });
