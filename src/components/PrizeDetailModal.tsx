@@ -42,6 +42,7 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser, trustStatu
   const { user, isAdmin } = useAuth();
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showProFeatureModal, setShowProFeatureModal] = useState(false);
 
   if (!prize) return null;
 
@@ -53,12 +54,23 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser, trustStatu
   // If deadline is more than 7 days away, lock for free users
   const canAccess = isAdmin || isProUser || isUrgent;
 
+  // AI Feature access: Must be logged in AND (Pro OR Admin)
+  const hasAIAccess = user && (isProUser || isAdmin);
+
   // Black Sheep warning check
   const isBlackSheep = trustStatus === 'warning';
 
   const handleUpgrade = () => {
     // Always open pricing modal - it will handle login redirect if needed
     setShowPricingModal(true);
+  };
+
+  const handleAIClick = () => {
+    if (hasAIAccess) {
+      setShowAIDialog(true);
+    } else {
+      setShowProFeatureModal(true);
+    }
   };
   return (
     <>
@@ -214,12 +226,19 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser, trustStatu
                     Zur Website des Veranstalters
                   </Button>
                   <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => setShowAIDialog(true)}
+                    variant={hasAIAccess ? "outline" : "secondary"}
+                    className={`flex-1 ${!hasAIAccess ? 'opacity-80' : ''}`}
+                    onClick={handleAIClick}
                   >
-                    <Sparkles className="h-4 w-4 mr-2" />
+                    {hasAIAccess ? (
+                      <Sparkles className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Lock className="h-4 w-4 mr-2" />
+                    )}
                     {t('nav.ai')} nutzen
+                    {!hasAIAccess && (
+                      <Crown className="h-3 w-3 ml-1 text-accent" />
+                    )}
                   </Button>
                 </div>
               </>
@@ -261,13 +280,52 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser, trustStatu
         </DialogContent>
       </Dialog>
 
-      {canAccess && (
+      {hasAIAccess && (
         <AIConsultantDialog
           prize={prize}
           isOpen={showAIDialog}
           onClose={() => setShowAIDialog(false)}
         />
       )}
+
+      {/* Pro Feature Modal for AI access restriction */}
+      <Dialog open={showProFeatureModal} onOpenChange={setShowProFeatureModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Lock className="h-6 w-6 text-accent" />
+              </div>
+              <DialogTitle className="font-display text-xl">
+                Pro-Feature
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <p className="text-muted-foreground leading-relaxed">
+              Dies ist ein Pro-Feature. Werden Sie Mitglied, um individuelle Bewerbungen erstellen zu lassen.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button
+                className="gradient-gold text-primary font-semibold border-0"
+                onClick={() => {
+                  setShowProFeatureModal(false);
+                  setShowPricingModal(true);
+                }}
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                {language === 'de' ? 'Jetzt Pro werden' : 'Upgrade to Pro'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowProFeatureModal(false)}
+              >
+                {language === 'de' ? 'Später' : 'Maybe later'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pricing Modal for upgrade */}
       <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
