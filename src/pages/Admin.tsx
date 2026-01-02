@@ -2,17 +2,19 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut } from 'lucide-react';
+import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut, Calendar } from 'lucide-react';
 import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -36,15 +38,82 @@ interface ScraperSource {
 }
 
 export default function Admin() {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, isAdmin, loading, signIn, signUp, signOut } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // Auth form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogout = async () => {
     setLoggingOut(true);
     await signOut();
     navigate('/');
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const { error } = await signIn(email, password);
+
+    if (error) {
+      toast({
+        title: language === 'de' ? 'Anmeldung fehlgeschlagen' : 'Login failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: language === 'de' ? 'Erfolgreich angemeldet!' : 'Successfully logged in!',
+      });
+    }
+
+    setIsSubmitting(false);
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password.length < 8) {
+      toast({
+        title: language === 'de' ? 'Passwort muss mindestens 8 Zeichen haben' : 'Password must be at least 8 characters',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        title: language === 'de' ? 'Passwörter stimmen nicht überein' : 'Passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const { error } = await signUp(email, password);
+
+    if (error) {
+      toast({
+        title: language === 'de' ? 'Registrierung fehlgeschlagen' : 'Registration failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: language === 'de' ? 'Erfolgreich registriert!' : 'Successfully registered!',
+        description: language === 'de' ? 'Sie können sich jetzt anmelden.' : 'You can now log in.',
+      });
+    }
+
+    setIsSubmitting(false);
   };
   
   const [contents, setContents] = useState<Record<ContentKey, string>>({
@@ -69,8 +138,6 @@ export default function Admin() {
 
   // Allow ANY logged-in user to save content (RLS now permits authenticated users)
   const canUseBackend = !!user;
-
-  // NOTE: We intentionally do NOT redirect here so the UI stays accessible for debugging.
 
 
   // Load existing content - always load for viewing, saving requires admin
@@ -371,11 +438,147 @@ export default function Admin() {
     }
   };
 
-  if (loadingContent) {
+  // Show loading spinner while checking auth
+  if (loading || loadingContent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
+    );
+  }
+
+  // AUTH GATE: If not logged in, show login form instead of dashboard
+  if (!user) {
+    return (
+      <>
+        <Helmet>
+          <title>Admin Login | Kunstpreiskalender</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
+          <div className="w-full max-w-md mb-4">
+            <button 
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+            >
+              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+              <span>{language === 'de' ? 'Zurück zum Kalender' : 'Back to Calendar'}</span>
+            </button>
+          </div>
+          
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
+                  <Shield className="h-6 w-6 text-destructive" />
+                </div>
+              </div>
+              <CardTitle className="font-display text-2xl">
+                {language === 'de' ? 'Admin-Bereich' : 'Admin Area'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'de' ? 'Bitte melden Sie sich an, um fortzufahren' : 'Please log in to continue'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="login">{language === 'de' ? 'Anmelden' : 'Login'}</TabsTrigger>
+                  <TabsTrigger value="signup">{language === 'de' ? 'Registrieren' : 'Sign Up'}</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="login">
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-login-email">{language === 'de' ? 'E-Mail' : 'Email'}</Label>
+                      <Input
+                        id="admin-login-email"
+                        type="email"
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-login-password">{language === 'de' ? 'Passwort' : 'Password'}</Label>
+                      <Input
+                        id="admin-login-password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-primary text-primary-foreground font-semibold"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      {language === 'de' ? 'Anmelden' : 'Login'}
+                    </Button>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-signup-email">{language === 'de' ? 'E-Mail' : 'Email'}</Label>
+                      <Input
+                        id="admin-signup-email"
+                        type="email"
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-signup-password">{language === 'de' ? 'Passwort' : 'Password'}</Label>
+                      <Input
+                        id="admin-signup-password"
+                        type="password"
+                        placeholder={language === 'de' ? 'min. 8 Zeichen' : 'min. 8 characters'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={8}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-signup-confirm">
+                        {language === 'de' ? 'Passwort wiederholen' : 'Confirm Password'}
+                      </Label>
+                      <Input
+                        id="admin-signup-confirm"
+                        type="password"
+                        placeholder={language === 'de' ? 'Passwort bestätigen' : 'Confirm password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        minLength={8}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-primary text-primary-foreground font-semibold"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      {language === 'de' ? 'Registrieren' : 'Sign Up'}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     );
   }
 
