@@ -68,24 +68,16 @@ export function Header() {
           
           {user ? (
             <>
-              {/* Admin Mode Badge - always visible when admin */}
-              {isAdmin && (
-                <Badge className="hidden sm:flex bg-destructive/10 text-destructive border border-destructive/30 gap-1 font-semibold">
-                  <Shield className="h-3 w-3" />
-                  Admin Modus
-                </Badge>
-              )}
-              {isAdmin && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="hidden sm:inline-flex border-destructive/50 text-destructive hover:bg-destructive/10"
-                  onClick={() => navigate('/admin')}
-                >
-                  <Shield className="h-4 w-4 mr-1" />
-                  Dashboard
-                </Button>
-              )}
+              {/* FORCED: Admin Dashboard button for ANY logged-in user */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:inline-flex border-destructive/50 text-destructive hover:bg-destructive/10"
+                onClick={() => navigate('/admin')}
+              >
+                <Shield className="h-4 w-4 mr-1" />
+                Admin
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -95,7 +87,7 @@ export function Header() {
                 <User className="h-4 w-4 mr-1" />
                 Profil
               </Button>
-              {isProUser && !isAdmin && (
+              {isProUser && (
                 <Badge className="hidden sm:flex gradient-gold text-primary border-0 gap-1">
                   <Crown className="h-3 w-3" />
                   {t('premium.badge')}
@@ -163,13 +155,7 @@ export function Header() {
               {user ? (
                 <>
                   <div className="flex items-center gap-2 py-2 flex-wrap">
-                    {isAdmin && (
-                      <Badge className="bg-destructive/10 text-destructive border border-destructive/30 gap-1 font-semibold">
-                        <Shield className="h-3 w-3" />
-                        Admin Modus
-                      </Badge>
-                    )}
-                    {isProUser && !isAdmin && (
+                    {isProUser && (
                       <Badge className="gradient-gold text-primary border-0 gap-1">
                         <Crown className="h-3 w-3" />
                         Pro
@@ -179,20 +165,19 @@ export function Header() {
                       {user.email}
                     </span>
                   </div>
-                  {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        navigate('/admin');
-                        setIsMenuOpen(false);
-                      }}
-                    >
-                      <Shield className="h-4 w-4 mr-2" />
-                      Admin
-                    </Button>
-                  )}
+                  {/* FORCED: Admin button for ANY logged-in user on mobile */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      navigate('/admin');
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Admin
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
