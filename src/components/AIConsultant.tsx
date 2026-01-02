@@ -10,11 +10,14 @@ import { ComingSoonModal } from '@/components/ComingSoonModal';
 
 export function AIConsultant() {
   const { t } = useLanguage();
-  const { isProUser } = useAuth();
+  const { user, isProUser, isAdmin } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState('');
+
+  // Check if user has access: must be logged in AND (Pro OR Admin)
+  const hasAccess = user && (isProUser || isAdmin);
 
   const features = [
     {
@@ -34,7 +37,7 @@ export function AIConsultant() {
   };
 
   const handleFeatureClick = (featureTitle: string) => {
-    if (isProUser) {
+    if (hasAccess) {
       setSelectedFeature(featureTitle);
       setShowComingSoonModal(true);
     } else {
@@ -94,12 +97,12 @@ export function AIConsultant() {
                   className="min-h-[120px] resize-none"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  disabled={!isProUser}
+                  disabled={!hasAccess}
                 />
                 <div className="flex justify-end">
                   <Button
                     className="gradient-gold text-primary font-semibold border-0"
-                    disabled={!isProUser || !prompt.trim()}
+                    disabled={!hasAccess || !prompt.trim()}
                   >
                     <Send className="h-4 w-4 mr-2" />
                     {t('ai.generate')}
@@ -108,14 +111,16 @@ export function AIConsultant() {
               </div>
             </CardContent>
 
-            {/* Pro overlay */}
-            {!isProUser && (
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-                <div className="text-center p-6">
-                  <Lock className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-                  <h3 className="font-display text-xl font-semibold mb-2">{t('ai.proFeature')}</h3>
-                  <p className="text-muted-foreground mb-4 max-w-sm">
-                    {t('ai.proDescription')}
+            {/* Pro overlay - shown for non-logged-in users OR logged-in non-Pro users */}
+            {!hasAccess && (
+              <div className="absolute inset-0 bg-background/90 backdrop-blur-md flex items-center justify-center">
+                <div className="text-center p-6 max-w-md">
+                  <Lock className="h-12 w-12 mx-auto mb-4 text-accent" />
+                  <h3 className="font-display text-xl font-semibold mb-3 text-foreground">
+                    Exklusiv für Pro-Mitglieder
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
+                    Dieses Feature ist exklusiv für Pro-Mitglieder. Erstellen Sie jetzt professionelle Bewerbungen mit unserem KI-Tool.
                   </p>
                   <Button 
                     className="gradient-gold text-primary font-semibold border-0"

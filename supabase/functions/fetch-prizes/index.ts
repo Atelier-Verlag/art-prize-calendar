@@ -385,26 +385,46 @@ serve(async (req) => {
       
       logStep(`Nach Datums-Filter: ${validPrizes.length} von ${extractedPrizes.length} Preisen behalten`);
 
-      // 4. SPEICHERN: Neue Preise in Datenbank einfügen (mit Dubletten-Check nach Name UND Website)
+      // 4. SPEICHERN: UPSERT - Neue Preise einfügen oder bestehende aktualisieren (basierend auf Website-URL)
       for (const prize of validPrizes) {
-        // Prüfen ob bereits vorhanden (nach Website-URL ODER Name)
+        // Validiere category gegen erlaubte Werte (inkl. neue Kategorien)
+        const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art", "Kunstpreis", "Wettbewerb"];
+        const safeCategory = validCategories.includes(prize.category) ? prize.category : "mixed";
+
+        // Prüfen ob bereits vorhanden (nach Website-URL)
         const { data: existingByUrl } = await supabaseClient
           .from("art_prizes")
           .select("id")
           .eq("website", prize.website)
           .maybeSingle();
 
-        const { data: existingByName } = await supabaseClient
-          .from("art_prizes")
-          .select("id")
-          .eq("name", prize.name)
-          .maybeSingle();
+        if (existingByUrl) {
+          // UPDATE: Bestehenden Eintrag aktualisieren
+          const { error: updateError } = await supabaseClient
+            .from("art_prizes")
+            .update({
+              name: prize.name,
+              deadline: prize.deadline,
+              description: prize.description,
+              organizer: prize.organizer,
+              region: prize.region,
+              country: prize.country,
+              category: safeCategory,
+              fee: prize.fee,
+              prize_amount: prize.prize_amount,
+              eligibility_restriction: prize.eligibility_restriction,
+              is_archived: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingByUrl.id);
 
-        if (!existingByUrl && !existingByName) {
-          // Validiere category gegen erlaubte Werte (inkl. neue Kategorien)
-          const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art", "Kunstpreis", "Wettbewerb"];
-          const safeCategory = validCategories.includes(prize.category) ? prize.category : "mixed";
-
+          if (updateError) {
+            logStep(`Fehler beim Aktualisieren von "${prize.name}"`, { error: updateError.message });
+          } else {
+            logStep(`Aktualisiert: ${prize.name}`);
+          }
+        } else {
+          // INSERT: Neuen Eintrag erstellen
           const { error: insertError } = await supabaseClient
             .from("art_prizes")
             .insert({
@@ -429,8 +449,6 @@ serve(async (req) => {
             newPrizesCount++;
             logStep(`Neu gespeichert: ${prize.name}${prize.isDraft ? ' (Entwurf)' : ''}`);
           }
-        } else {
-          logStep(`Übersprungen (existiert bereits): ${prize.name}`);
         }
       }
     }
