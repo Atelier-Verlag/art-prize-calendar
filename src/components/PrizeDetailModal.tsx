@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCategoryColor, formatDeadline } from '@/data/mockArtPrizes';
@@ -24,22 +23,25 @@ import {
   Sparkles,
   Lock,
   Crown,
+  AlertTriangle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { AIConsultantDialog } from './AIConsultantDialog';
+import { PricingModal } from './PricingModal';
 
 interface PrizeDetailModalProps {
   prize: ArtPrize | null;
   isOpen: boolean;
   onClose: () => void;
   isProUser: boolean;
+  trustStatus?: 'verified' | 'neutral' | 'warning';
 }
 
-export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDetailModalProps) {
+export function PrizeDetailModal({ prize, isOpen, onClose, isProUser, trustStatus = 'verified' }: PrizeDetailModalProps) {
   const { t, language } = useLanguage();
-  const { user, isAdmin, startCheckout } = useAuth();
-  const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   const [showAIDialog, setShowAIDialog] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   if (!prize) return null;
 
@@ -48,15 +50,13 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
   // Paid access: only admins/pro users can see tender details.
   const canAccess = isAdmin || (user && isProUser);
 
-  const handleUpgrade = () => {
-    if (!user) {
-      onClose();
-      navigate('/auth');
-    } else {
-      startCheckout('price_1RjZ68D70Qs4RhIVb39PiHqZ');
-    }
-  };
+  // Black Sheep warning check
+  const isBlackSheep = trustStatus === 'warning';
 
+  const handleUpgrade = () => {
+    // Always open pricing modal - it will handle login redirect if needed
+    setShowPricingModal(true);
+  };
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -67,8 +67,13 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
                 {prize.category}
               </Badge>
               <DialogTitle className="font-display text-2xl text-left">
-                {canAccess ? prize.name : t('premium.lockedTitle')}
+                {prize.name}
               </DialogTitle>
+              {!canAccess && (
+                <div className="shrink-0 bg-muted rounded-full p-1.5">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
             </div>
             {canAccess && (
               <p className="text-muted-foreground text-left">{prize.organizer}</p>
@@ -76,6 +81,23 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
           </DialogHeader>
 
           <div className="space-y-6 mt-4">
+            {/* Black Sheep Warning - ALWAYS VISIBLE for safety */}
+            {isBlackSheep && (
+              <div className="bg-destructive/20 border-2 border-destructive rounded-xl p-4">
+                <div className="flex items-center gap-2 text-destructive mb-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span className="font-bold uppercase tracking-wide">
+                    {language === 'de' ? 'Achtung: Mögliche Kostenfalle!' : 'Warning: Potential Scam!'}
+                  </span>
+                </div>
+                <p className="text-sm text-destructive/90">
+                  {language === 'de' 
+                    ? 'Diese Ausschreibung wurde als potenziell unseriös gemeldet. Bitte prüfen Sie die Konditionen sorgfältig.'
+                    : 'This call has been flagged as potentially dubious. Please review the conditions carefully.'}
+                </p>
+              </div>
+            )}
+
             {/* Deadline and Fee highlight - always visible */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 bg-muted/50 rounded-xl p-4 border border-border">
@@ -200,25 +222,37 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
               </>
             ) : (
               /* Upgrade CTA for non-pro users */
-              <div className="text-center py-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-4">
-                  <Lock className="h-8 w-8 text-accent" />
+              <>
+                {/* Blurred description preview */}
+                <div className="relative">
+                  <p className="text-muted-foreground leading-relaxed blur-[4px] select-none">
+                    {prize.description.substring(0, 200)}...
+                  </p>
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background" />
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-2">
-                  {t('premium.hiddenInfo')}
-                </h3>
-                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                  Erhalten Sie Zugang zu allen Details, Beschreibungen, Anforderungen und Links.
-                </p>
-                <Button
-                  size="lg"
-                  className="gradient-gold text-primary font-semibold border-0"
-                  onClick={handleUpgrade}
-                >
-                  <Crown className="h-5 w-5 mr-2" />
-                  {t('premium.upgrade')}
-                </Button>
-              </div>
+
+                <div className="text-center py-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-4">
+                    <Lock className="h-8 w-8 text-accent" />
+                  </div>
+                  <h3 className="font-display text-xl font-semibold mb-2">
+                    {t('premium.hiddenInfo')}
+                  </h3>
+                  <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                    {language === 'de' 
+                      ? 'Erhalten Sie Zugang zu allen Details, Beschreibungen, Anforderungen und Links.'
+                      : 'Get access to all details, descriptions, requirements and links.'}
+                  </p>
+                  <Button
+                    size="lg"
+                    className="gradient-gold text-primary font-semibold border-0"
+                    onClick={handleUpgrade}
+                  >
+                    <Crown className="h-5 w-5 mr-2" />
+                    {language === 'de' ? 'Jetzt Pro werden' : 'Go Pro'}
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         </DialogContent>
@@ -231,6 +265,9 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser }: PrizeDet
           onClose={() => setShowAIDialog(false)}
         />
       )}
+
+      {/* Pricing Modal for upgrade */}
+      <PricingModal isOpen={showPricingModal} onClose={() => setShowPricingModal(false)} />
     </>
   );
 }
