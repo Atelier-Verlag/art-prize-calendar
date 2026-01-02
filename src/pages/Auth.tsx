@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,15 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Loader2, ArrowLeft, Mail } from 'lucide-react';
+import { Calendar, Loader2, ArrowLeft, Mail, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type AuthView = 'login' | 'signup' | 'forgot-password';
 
 export default function Auth() {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, signUp, loading, startCheckout } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   const [email, setEmail] = useState('');
@@ -24,13 +25,29 @@ export default function Auth() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [view, setView] = useState<AuthView>('login');
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
 
-  // Redirect if already logged in
+  // Get checkout params from URL
+  const priceId = searchParams.get('priceId');
+  const returnTo = searchParams.get('returnTo') || '/';
+  const isCheckoutFlow = !!priceId;
+
+  // Handle post-auth checkout redirect
   useEffect(() => {
-    if (user && !loading) {
-      navigate('/');
-    }
-  }, [user, loading, navigate]);
+    const handlePostAuthCheckout = async () => {
+      if (user && !loading && priceId && !isProcessingCheckout) {
+        setIsProcessingCheckout(true);
+        // User just logged in/signed up and has a pending checkout
+        await startCheckout(priceId);
+        navigate(returnTo);
+      } else if (user && !loading && !priceId) {
+        // Normal auth flow, redirect to returnTo or home
+        navigate(returnTo);
+      }
+    };
+
+    handlePostAuthCheckout();
+  }, [user, loading, priceId, returnTo, navigate, startCheckout, isProcessingCheckout]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,11 +61,9 @@ export default function Auth() {
         description: error.message,
         variant: 'destructive',
       });
-    } else {
-      navigate('/');
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
+    // Don't navigate here - useEffect will handle it after user state updates
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -87,14 +102,16 @@ export default function Auth() {
           variant: 'destructive',
         });
       }
+      setIsSubmitting(false);
     } else {
       toast({
         title: language === 'de' ? 'Erfolgreich registriert!' : 'Successfully registered!',
-        description: language === 'de' ? 'Sie können sich jetzt anmelden.' : 'You can now log in.',
+        description: isCheckoutFlow 
+          ? (language === 'de' ? 'Weiterleitung zur Zahlung...' : 'Redirecting to checkout...')
+          : (language === 'de' ? 'Willkommen!' : 'Welcome!'),
       });
+      // Don't navigate here - useEffect will handle checkout redirect after user state updates
     }
-
-    setIsSubmitting(false);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -239,6 +256,23 @@ export default function Auth() {
           <span>{language === 'de' ? 'Zurück zum Kalender' : 'Back to Calendar'}</span>
         </Link>
       </div>
+
+      {/* Checkout Flow Banner */}
+      {isCheckoutFlow && (
+        <div className="w-full max-w-md mb-4 bg-accent/10 border border-accent/30 rounded-lg p-4 flex items-start gap-3">
+          <ShoppingCart className="h-5 w-5 text-accent mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {language === 'de' ? 'Fast geschafft!' : 'Almost there!'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {language === 'de' 
+                ? 'Melden Sie sich an oder erstellen Sie ein Konto, um den Kauf abzuschließen.'
+                : 'Sign in or create an account to complete your purchase.'}
+            </p>
+          </div>
+        </div>
+      )}
       
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -249,11 +283,14 @@ export default function Auth() {
           </div>
           <CardTitle className="font-display text-2xl">Kunstpreiskalender</CardTitle>
           <CardDescription>
-            {t('hero.subtitle')}
+            {isCheckoutFlow 
+              ? (language === 'de' ? 'Konto erstellen oder anmelden' : 'Create account or sign in')
+              : t('hero.subtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          {/* Default to signup tab when in checkout flow */}
+          <Tabs defaultValue={isCheckoutFlow ? 'signup' : 'login'} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">{t('auth.login')}</TabsTrigger>
               <TabsTrigger value="signup">{t('auth.signup')}</TabsTrigger>

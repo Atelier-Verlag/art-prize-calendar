@@ -20,7 +20,8 @@ export function PricingSection() {
     if (!priceId) return;
     
     if (!user) {
-      navigate('/auth');
+      // Pass priceId to auth page so checkout continues after login/signup
+      navigate(`/auth?priceId=${encodeURIComponent(priceId)}&returnTo=/`);
       return;
     }
     
