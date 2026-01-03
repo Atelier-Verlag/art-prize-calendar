@@ -99,17 +99,31 @@ FOKUS:
 - Bildende Kunst (Malerei, Skulptur, Installation, Fotografie, Performance, Medienkunst)
 - Keine Musik, Theater oder Literatur-Wettbewerbe
 
-KATEGORIEN (STRIKT VERWENDEN):
-- "Kunstpreis" = Preise für herausragende Kunstwerke oder Lebenswerk
-- "Wettbewerb" = Wettbewerbe mit Jurierung und Preisvergabe  
-- "grant" = Stipendien und finanzielle Förderungen (Arbeitsstipendien)
-- "painting" = Spezifisch für Malerei
-- "photography" = Spezifisch für Fotografie
-- "sculpture" = Spezifisch für Bildhauerei
-- "performance" = Spezifisch für Performance-Kunst
-- "media" = Spezifisch für Medienkunst / New Media Art
-- "residency" = Künstlerresidenzen
-- "mixed" = Mehrere Medien oder nicht eindeutig zuordenbar
+KATEGORISIERUNGS-REGELN (STRIKT BEFOLGEN - basierend auf Titel UND Beschreibung):
+
+1. "Ausstellung" / "exhibition" = Wenn Titel/Beschreibung enthält: "Exposition", "Ausstellung", "Show", "Exhibition", "Gallery Show", "Gruppenausstellung", "Solo Show"
+
+2. "Stipendium" / "grant" = Wenn Titel/Beschreibung enthält: "Grant", "Stipendium", "Bourse", "Scholarship", "Fellowship", "Arbeitsstipendium", "Förderstipendium" 
+   WICHTIG: Dies ist NICHT das gleiche wie "Residenz"!
+
+3. "Kunstpreis" = Wenn Titel/Beschreibung enthält: "Prize", "Award", "Preis", "Kunstpreis", "Prix", "Auszeichnung", "Ehrung"
+
+4. "Residenz" / "residency" = Wenn Titel/Beschreibung enthält: "Residency", "Residenz", "Artist-in-Residence", "Aufenthalt", "Atelier"
+   NUR wenn es um einen physischen Aufenthalt geht!
+
+5. "Förderung" = Wenn Titel/Beschreibung enthält: "Förderung", "Funding", "Unterstützung", "Projektförderung"
+
+6. "Kunst am Bau" / "public_art" = Wenn Titel/Beschreibung enthält: "Public Art", "Kunst am Bau", "Kunst im öffentlichen Raum", "Sculpture Park"
+
+7. "Wettbewerb" = Standard-Fallback für Wettbewerbe mit Jurierung die nicht in andere Kategorien passen
+
+SPARTEN (zusätzlich zur Kategorie):
+- "painting" = Malerei
+- "photography" = Fotografie  
+- "sculpture" = Bildhauerei
+- "performance" = Performance-Kunst
+- "media" = Medienkunst / New Media Art
+- "mixed" = Mehrere Medien
 
 ELIGIBILITY RESTRICTIONS (WICHTIG für DACH-Raum):
 Suche SPEZIELL nach lokalen Einschränkungen wie:
@@ -127,7 +141,7 @@ Für jeden gefundenen Eintrag extrahiere:
 - organizer: Veranstalter/Organisation
 - region: Region/Stadt (z.B. "Berlin", "Bayern", "Europa")
 - country: Land (z.B. "Deutschland", "Österreich", "International")
-- category: STRIKT eine von: Kunstpreis, Wettbewerb, grant, painting, photography, sculpture, performance, media, residency, mixed
+- category: STRIKT basierend auf obigen Regeln - wähle die PASSENDSTE Kategorie!
 - fee: Teilnahmegebühr in Euro (null wenn kostenlos oder unbekannt)
 - prize_amount: Preisgeld in Euro (null wenn unbekannt)
 - eligibility_restriction: Lokale Einschränkungen (z.B. "Nur für in Köln lebende Künstler", "Nur für Tiroler Künstler") oder null wenn offen`;
@@ -167,7 +181,8 @@ Für jeden gefundenen Eintrag extrahiere:
                       country: { type: "string" },
                       category: { 
                         type: "string", 
-                        enum: ["Kunstpreis", "Wettbewerb", "grant", "painting", "photography", "sculpture", "performance", "media", "residency", "mixed"] 
+                        enum: ["Kunstpreis", "Wettbewerb", "Stipendium", "Förderung", "Residenz", "Ausstellung", "Kunst am Bau", "grant", "painting", "photography", "sculpture", "performance", "media", "residency", "exhibition", "public_art", "mixed"],
+                        description: "Category based on content - Ausstellung for exhibitions, Stipendium for grants/scholarships, Kunstpreis for prizes/awards, Residenz for residencies, Wettbewerb for competitions"
                       },
                       fee: { type: "number", nullable: true },
                       prize_amount: { type: "number", nullable: true },
@@ -388,8 +403,60 @@ serve(async (req) => {
       // 4. SPEICHERN: UPSERT - Neue Preise einfügen oder bestehende aktualisieren (basierend auf Website-URL)
       for (const prize of validPrizes) {
         // Validiere category gegen erlaubte Werte (inkl. neue Kategorien)
-        const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art", "Kunstpreis", "Wettbewerb"];
-        const safeCategory = validCategories.includes(prize.category) ? prize.category : "mixed";
+        const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art", "Kunstpreis", "Wettbewerb", "Stipendium", "Förderung", "Residenz", "Ausstellung", "Kunst am Bau"];
+        
+        // Map English categories to German for consistency
+        let safeCategory = prize.category;
+        if (safeCategory === "grant") safeCategory = "Stipendium";
+        if (safeCategory === "exhibition") safeCategory = "Ausstellung";
+        if (safeCategory === "residency") safeCategory = "Residenz";
+        if (safeCategory === "public_art") safeCategory = "Kunst am Bau";
+        
+        if (!validCategories.includes(safeCategory)) {
+          safeCategory = "Wettbewerb"; // fallback
+        }
+
+        // DUPLICATE CHECK: Check if similar entry already exists (by name similarity within similar timeframe)
+        const { data: potentialDuplicates } = await supabaseClient
+          .from("art_prizes")
+          .select("id, name, deadline")
+          .ilike("name", `%${prize.name.split(' ').slice(0, 3).join('%')}%`)
+          .eq("is_archived", false);
+
+        let isDuplicate = false;
+        let existingId: string | null = null;
+
+        if (potentialDuplicates && potentialDuplicates.length > 0) {
+          for (const existing of potentialDuplicates) {
+            // Check if names are very similar (same base name)
+            const existingNameLower = existing.name.toLowerCase();
+            const newNameLower = prize.name.toLowerCase();
+            
+            // If names are similar and deadlines are within 60 days of each other
+            const existingDeadline = new Date(existing.deadline);
+            const newDeadline = new Date(prize.deadline);
+            const daysDiff = Math.abs((existingDeadline.getTime() - newDeadline.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if ((existingNameLower.includes(newNameLower.substring(0, 20)) || 
+                 newNameLower.includes(existingNameLower.substring(0, 20))) && 
+                daysDiff < 60) {
+              isDuplicate = true;
+              // Keep the one with the later deadline
+              if (newDeadline > existingDeadline) {
+                existingId = existing.id;
+                logStep(`Duplicate gefunden: "${existing.name}" - wird aktualisiert mit späterem Datum`);
+              } else {
+                logStep(`Duplicate übersprungen: "${prize.name}" (bestehender Eintrag hat späteres Datum)`);
+              }
+              break;
+            }
+          }
+        }
+
+        // Skip if duplicate with earlier deadline
+        if (isDuplicate && !existingId) {
+          continue;
+        }
 
         // Prüfen ob bereits vorhanden (nach Website-URL)
         const { data: existingByUrl } = await supabaseClient
@@ -398,7 +465,9 @@ serve(async (req) => {
           .eq("website", prize.website)
           .maybeSingle();
 
-        if (existingByUrl) {
+        const targetId = existingId || existingByUrl?.id;
+
+        if (targetId) {
           // UPDATE: Bestehenden Eintrag aktualisieren
           const { error: updateError } = await supabaseClient
             .from("art_prizes")
@@ -416,7 +485,7 @@ serve(async (req) => {
               is_archived: false,
               updated_at: new Date().toISOString(),
             })
-            .eq("id", existingByUrl.id);
+            .eq("id", targetId);
 
           if (updateError) {
             logStep(`Fehler beim Aktualisieren von "${prize.name}"`, { error: updateError.message });

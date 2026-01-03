@@ -6,17 +6,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Send, FileText, Route, Lock, Crown } from 'lucide-react';
 import { PricingModal } from '@/components/PricingModal';
-import { ComingSoonModal } from '@/components/ComingSoonModal';
 import { ApplicationLetterDialog } from '@/components/ApplicationLetterDialog';
+import { ApplicationRoadmapDialog } from '@/components/ApplicationRoadmapDialog';
 
 export function AIConsultant() {
   const { t } = useLanguage();
   const { user, isProUser, isAdmin } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [showApplicationLetterDialog, setShowApplicationLetterDialog] = useState(false);
-  const [selectedFeature, setSelectedFeature] = useState('');
+  const [showApplicationRoadmapDialog, setShowApplicationRoadmapDialog] = useState(false);
 
   // Check if user has access: must be logged in AND (Pro OR Admin)
   const hasAccess = user && (isProUser || isAdmin);
@@ -26,13 +25,13 @@ export function AIConsultant() {
       icon: FileText,
       titleKey: 'ai.feature1.title',
       descKey: 'ai.feature1.desc',
-      isActive: true, // Bewerbungsschreiben is now active!
+      featureId: 'letter',
     },
     {
       icon: Route,
       titleKey: 'ai.feature2.title',
       descKey: 'ai.feature2.desc',
-      isActive: false, // Bewerbungsfahrplan still under development
+      featureId: 'roadmap',
     },
   ];
 
@@ -40,19 +39,16 @@ export function AIConsultant() {
     setShowPricingModal(true);
   };
 
-  const handleFeatureClick = (featureTitle: string, isActive: boolean) => {
+  const handleFeatureClick = (featureId: string) => {
     if (!hasAccess) {
       setShowPricingModal(true);
       return;
     }
     
-    if (isActive && featureTitle === t('ai.feature1.title')) {
-      // Open the actual Application Letter Dialog
+    if (featureId === 'letter') {
       setShowApplicationLetterDialog(true);
-    } else {
-      // Show "Coming Soon" for inactive features
-      setSelectedFeature(featureTitle);
-      setShowComingSoonModal(true);
+    } else if (featureId === 'roadmap') {
+      setShowApplicationRoadmapDialog(true);
     }
   };
 
@@ -79,22 +75,15 @@ export function AIConsultant() {
             {features.map((feature) => (
               <Card 
                 key={feature.titleKey} 
-                className={`hover:shadow-card-hover transition-all duration-300 cursor-pointer ${
-                  feature.isActive ? 'ring-2 ring-accent/20' : ''
-                }`}
-                onClick={() => handleFeatureClick(t(feature.titleKey), feature.isActive)}
+                className="hover:shadow-card-hover transition-all duration-300 cursor-pointer ring-2 ring-accent/20"
+                onClick={() => handleFeatureClick(feature.featureId)}
               >
                 <CardHeader>
                   <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
                     <feature.icon className="h-6 w-6 text-accent" />
                   </div>
-                  <CardTitle className="font-display text-xl flex items-center gap-2">
+                  <CardTitle className="font-display text-xl">
                     {t(feature.titleKey)}
-                    {!feature.isActive && (
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground font-normal">
-                        Coming Soon
-                      </span>
-                    )}
                   </CardTitle>
                   <CardDescription>{t(feature.descKey)}</CardDescription>
                 </CardHeader>
@@ -161,14 +150,13 @@ export function AIConsultant() {
         isOpen={showPricingModal} 
         onClose={() => setShowPricingModal(false)} 
       />
-      <ComingSoonModal 
-        isOpen={showComingSoonModal} 
-        onClose={() => setShowComingSoonModal(false)}
-        featureName={selectedFeature}
-      />
       <ApplicationLetterDialog
         isOpen={showApplicationLetterDialog}
         onClose={() => setShowApplicationLetterDialog(false)}
+      />
+      <ApplicationRoadmapDialog
+        isOpen={showApplicationRoadmapDialog}
+        onClose={() => setShowApplicationRoadmapDialog(false)}
       />
     </section>
   );
