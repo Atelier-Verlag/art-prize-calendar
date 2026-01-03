@@ -155,8 +155,16 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
         <p className="text-xs text-muted-foreground text-center">
           {language === 'de' 
-            ? 'Jederzeit kündbar. Sichere Zahlung über Stripe.'
-            : 'Cancel anytime. Secure payment via Stripe.'}
+            ? 'Jederzeit kündbar. Sichere Zahlung über '
+            : 'Cancel anytime. Secure payment via '}
+          <a 
+            href="https://stripe.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground transition-colors"
+          >
+            Stripe
+          </a>.
         </p>
       </DialogContent>
     </Dialog>
