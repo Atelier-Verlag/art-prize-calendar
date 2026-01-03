@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.fetch-prizes]
 verify_jwt = false
+
+[functions.generate-roadmap]
+verify_jwt = true
+
+[functions.ai-consultant]
+verify_jwt = true
+
+[functions.generate-application-letter]
+verify_jwt = true
