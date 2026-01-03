@@ -48,10 +48,10 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser, trustStatu
 
   const categoryClass = getCategoryColor(prize.category);
   const daysLeft = getDaysUntilDeadline(prize.deadline);
-  const isUrgent = daysLeft <= 7;
+  const isUrgent = daysLeft <= 3;
 
-  // 7-DAY RULE: If deadline is within 7 days, show ALL details to EVERYONE (teaser)
-  // If deadline is more than 7 days away, lock for free users
+  // 3-DAY RULE: If deadline is within 3 days, show ALL details to EVERYONE (teaser)
+  // If deadline is more than 3 days away, lock for free users
   const canAccess = isAdmin || isProUser || isUrgent;
 
   // AI Feature access: Must be logged in AND (Pro OR Admin)
@@ -102,13 +102,11 @@ export function PrizeDetailModal({ prize, isOpen, onClose, isProUser, trustStatu
                 <div className="flex items-center gap-2 text-destructive mb-2">
                   <AlertTriangle className="h-5 w-5" />
                   <span className="font-bold uppercase tracking-wide">
-                    {language === 'de' ? 'Achtung: Mögliche Kostenfalle!' : 'Warning: Potential Scam!'}
+                    {t('blacksheep.scamWarning')}
                   </span>
                 </div>
                 <p className="text-sm text-destructive/90">
-                  {language === 'de' 
-                    ? 'Diese Ausschreibung wurde als potenziell unseriös gemeldet. Bitte prüfen Sie die Konditionen sorgfältig.'
-                    : 'This call has been flagged as potentially dubious. Please review the conditions carefully.'}
+                  {t('blacksheep.scamDescription')}
                 </p>
               </div>
             )}

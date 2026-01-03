@@ -27,10 +27,10 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
 
   const categoryClass = getCategoryColor(prize.category);
   const daysLeft = getDaysUntilDeadline(prize.deadline);
-  const isUrgent = daysLeft <= 7;
+  const isUrgent = daysLeft <= 3;
 
-  // 7-DAY RULE: If deadline is within 7 days, show ALL details to EVERYONE (teaser)
-  // If deadline is more than 7 days away, lock for free users
+  // 3-DAY RULE: If deadline is within 3 days, show ALL details to EVERYONE (teaser)
+  // If deadline is more than 3 days away, lock for free users
   const hasAccess = isAdmin || isProUser || isUrgent;
   const isLocked = !hasAccess;
 
@@ -108,7 +108,7 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
               <div className="flex items-center gap-2">
                 <ThumbsDown className="h-5 w-5" />
                 <span className="text-sm font-bold">
-                  {language === 'de' ? 'Achtung: Teilnahmegebühr!' : 'Warning: Entry Fee!'}
+                  {t('blacksheep.warning')}
                 </span>
               </div>
               {hasEntryFee && (
@@ -130,10 +130,10 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-destructive font-semibold text-base">
                 <ThumbsDown className="h-5 w-5" />
-                <span>Grauzone Warnung</span>
+                <span>{t('blacksheep.title')}</span>
               </div>
               <p className="text-base leading-relaxed">
-                Weitere Informationen zu der Grauzone in der Kunstszene erfahren Sie regelmäßig aktuell in der Zeitschrift{' '}
+                {t('blacksheep.description1')}{' '}
                 <a 
                   href="https://www.atelier-verlag.de" 
                   target="_blank" 
@@ -143,10 +143,10 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
                 >
                   atelier (www.atelier-verlag.de)
                 </a>{' '}
-                in der Rubrik "Grauzone".
+                {t('blacksheep.description2')}
               </p>
               <p className="text-base leading-relaxed">
-                Eine Liste über die schon dort behandelten Grauzonen-Fälle, in denen die wenig künstlerfreundlichen Konditionen von Organisatoren untersucht wurden, finden Sie unter:{' '}
+                {t('blacksheep.archiveInfo')}{' '}
                 <a 
                   href="https://www.atelier-verlag.de/grauzone-archiv" 
                   target="_blank" 
@@ -154,7 +154,7 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
                   className="text-primary underline hover:text-primary/80 font-semibold"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  Grauzone Archiv
+                  {t('blacksheep.archiveLink')}
                 </a>
               </p>
             </div>

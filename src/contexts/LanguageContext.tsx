@@ -180,6 +180,64 @@ export const translations: Translations = {
   'footer.disclaimer': { de: 'Haftungsausschluss', en: 'Disclaimer', fr: 'Avertissement', es: 'Descargo', ko: '면책조항' },
   'footer.terms': { de: 'Nutzungsbedingungen', en: 'Terms of Service', fr: 'Conditions d\'utilisation', es: 'Términos de servicio', ko: '이용약관' },
   'footer.sitemap': { de: 'Sitemap', en: 'Sitemap', fr: 'Plan du site', es: 'Mapa del sitio', ko: '사이트맵' },
+
+  // Black Sheep / Fee Warning
+  'blacksheep.warning': { 
+    de: 'Achtung: Teilnahmegebühr!', 
+    en: 'Warning: Entry Fee!', 
+    fr: 'Attention: Frais de participation!', 
+    es: '¡Atención: Cuota de participación!', 
+    ko: '주의: 참가비!' 
+  },
+  'blacksheep.title': { 
+    de: 'Grauzone Warnung', 
+    en: 'Gray Zone Warning', 
+    fr: 'Avertissement Zone Grise', 
+    es: 'Advertencia Zona Gris', 
+    ko: '그레이존 경고' 
+  },
+  'blacksheep.description1': { 
+    de: 'Weitere Informationen zu der Grauzone in der Kunstszene erfahren Sie regelmäßig aktuell in der Zeitschrift', 
+    en: 'For more information about gray zones in the art scene, regularly visit the magazine', 
+    fr: 'Pour plus d\'informations sur les zones grises dans le monde de l\'art, consultez régulièrement le magazine', 
+    es: 'Para más información sobre las zonas grises en el mundo del arte, consulte regularmente la revista', 
+    ko: '예술계의 그레이존에 대한 자세한 정보는 정기적으로 잡지에서 확인하세요' 
+  },
+  'blacksheep.description2': { 
+    de: 'in der Rubrik "Grauzone".', 
+    en: 'in the "Gray Zone" section.', 
+    fr: 'dans la rubrique "Zone Grise".', 
+    es: 'en la sección "Zona Gris".', 
+    ko: '"그레이존" 섹션에서.' 
+  },
+  'blacksheep.archiveInfo': { 
+    de: 'Eine Liste über die schon dort behandelten Grauzonen-Fälle, in denen die wenig künstlerfreundlichen Konditionen von Organisatoren untersucht wurden, finden Sie unter:', 
+    en: 'A list of gray zone cases already covered, where unfavorable conditions for artists by organizers were examined, can be found at:', 
+    fr: 'Une liste des cas de zone grise déjà traités, où les conditions peu favorables aux artistes des organisateurs ont été examinées, est disponible sur:', 
+    es: 'Una lista de casos de zona gris ya cubiertos, donde se examinaron las condiciones desfavorables para artistas por parte de organizadores, se encuentra en:', 
+    ko: '이미 다룬 그레이존 사례 목록(주최자의 예술가에게 불리한 조건을 조사한)은 다음에서 확인할 수 있습니다:' 
+  },
+  'blacksheep.archiveLink': { 
+    de: 'Grauzone Archiv', 
+    en: 'Gray Zone Archive', 
+    fr: 'Archives Zone Grise', 
+    es: 'Archivo Zona Gris', 
+    ko: '그레이존 아카이브' 
+  },
+  'blacksheep.scamWarning': { 
+    de: 'Achtung: Mögliche Kostenfalle!', 
+    en: 'Warning: Potential Scam!', 
+    fr: 'Attention: Arnaque potentielle!', 
+    es: '¡Atención: Posible estafa!', 
+    ko: '주의: 잠재적 사기!' 
+  },
+  'blacksheep.scamDescription': { 
+    de: 'Diese Ausschreibung wurde als potenziell unseriös gemeldet. Bitte prüfen Sie die Konditionen sorgfältig.', 
+    en: 'This call has been flagged as potentially dubious. Please review the conditions carefully.', 
+    fr: 'Cet appel a été signalé comme potentiellement douteux. Veuillez examiner attentivement les conditions.', 
+    es: 'Esta convocatoria ha sido marcada como potencialmente dudosa. Por favor revise las condiciones cuidadosamente.', 
+    ko: '이 공모전은 잠재적으로 의심스러운 것으로 표시되었습니다. 조건을 신중하게 검토하세요.' 
+  },
 };
 
 interface LanguageContextType {
