@@ -11,10 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Check, Sparkles, Crown, LogIn } from 'lucide-react';
 
-// Stripe Price IDs (from Stripe products)
+// Stripe LIVE Price IDs
 const PRICE_IDS = {
-  monthly: 'price_1SjMfs2MuRh0bb5poHynGcCg', // Monatspass - €4/month
-  yearly: 'price_1SjMgf2MuRh0bb5prPE2Ri4w',  // Jahrespass - €39/year
+  monthly: 'price_1ShIxw2MuRh0bb5pdNnDGCJv', // Monatspass - €4/month
+  yearly: 'price_1SlUaA2MuRh0bb5p5H7Rz9E8',  // Jahrespass - €39/year
 };
 
 interface PricingModalProps {

@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, Sparkles } from 'lucide-react';
 
-// Stripe Price IDs
+// Stripe LIVE Price IDs
 const PRICE_IDS = {
   monthly: 'price_1ShIxw2MuRh0bb5pdNnDGCJv',
-  yearly: 'price_1ShJ302MuRh0bb5pQconexMx',
+  yearly: 'price_1SlUaA2MuRh0bb5p5H7Rz9E8',
 };
 
 export function PricingSection() {
