@@ -74,12 +74,43 @@ async function searchWithTavily(query: string, apiKey: string): Promise<TavilyRe
   return data.results || [];
 }
 
+// Process items in smaller batches to avoid timeout
+const BATCH_SIZE = 5;
+
 async function extractPrizesWithAI(
   searchResults: TavilyResult[],
   lovableApiKey: string
 ): Promise<ExtractedPrize[]> {
   logStep("AI-Extraktion startet", { resultCount: searchResults.length });
 
+  const allPrizes: ExtractedPrize[] = [];
+  
+  // Process in batches of BATCH_SIZE to avoid timeout
+  for (let i = 0; i < searchResults.length; i += BATCH_SIZE) {
+    const batch = searchResults.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(searchResults.length / BATCH_SIZE);
+    
+    logStep(`Verarbeite Batch ${batchNum}/${totalBatches}`, { batchSize: batch.length });
+    
+    try {
+      const batchPrizes = await extractPrizeBatch(batch, lovableApiKey);
+      allPrizes.push(...batchPrizes);
+      logStep(`Batch ${batchNum} abgeschlossen`, { foundPrizes: batchPrizes.length });
+    } catch (e) {
+      logStep(`Fehler in Batch ${batchNum}`, { error: String(e) });
+      // Continue with next batch instead of failing completely
+    }
+  }
+
+  logStep("AI-Extraktion abgeschlossen", { totalPrizes: allPrizes.length });
+  return allPrizes;
+}
+
+async function extractPrizeBatch(
+  searchResults: TavilyResult[],
+  lovableApiKey: string
+): Promise<ExtractedPrize[]> {
   const resultsText = searchResults
     .map((r, i) => `[${i + 1}] Titel: ${r.title}\nURL: ${r.url}\nInhalt: ${r.content}`)
     .join("\n\n---\n\n");
@@ -117,22 +148,6 @@ KATEGORISIERUNGS-REGELN (STRIKT BEFOLGEN - basierend auf Titel UND Beschreibung)
 
 7. "Wettbewerb" = Standard-Fallback für Wettbewerbe mit Jurierung die nicht in andere Kategorien passen
 
-SPARTEN (zusätzlich zur Kategorie):
-- "painting" = Malerei
-- "photography" = Fotografie  
-- "sculpture" = Bildhauerei
-- "performance" = Performance-Kunst
-- "media" = Medienkunst / New Media Art
-- "mixed" = Mehrere Medien
-
-ELIGIBILITY RESTRICTIONS (WICHTIG für DACH-Raum):
-Suche SPEZIELL nach lokalen Einschränkungen wie:
-- "Wohnsitz in...", "nur für Künstler aus...", "living in...", "born in..."
-- "nur für Bewerber aus...", "Tiroler Künstler", "Kölner Künstler"
-- Beschränkungen auf Bundesländer, Städte oder Regionen
-- "EU residents only", "German citizens", etc.
-Wenn gefunden, extrahiere diese in eligibility_restriction. Bei internationalen Ausschreibungen ohne Einschränkung: null
-
 Für jeden gefundenen Eintrag extrahiere:
 - name: Titel der Ausschreibung
 - deadline: Datum im Format YYYY-MM-DD (MUSS in der Zukunft liegen!)
@@ -144,7 +159,7 @@ Für jeden gefundenen Eintrag extrahiere:
 - category: STRIKT basierend auf obigen Regeln - wähle die PASSENDSTE Kategorie!
 - fee: Teilnahmegebühr in Euro (null wenn kostenlos oder unbekannt)
 - prize_amount: Preisgeld in Euro (null wenn unbekannt)
-- eligibility_restriction: Lokale Einschränkungen (z.B. "Nur für in Köln lebende Künstler", "Nur für Tiroler Künstler") oder null wenn offen`;
+- eligibility_restriction: Lokale Einschränkungen (z.B. "Nur für in Köln lebende Künstler") oder null wenn offen`;
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -211,13 +226,11 @@ Für jeden gefundenen Eintrag extrahiere:
   // Parse tool call response
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall?.function?.arguments) {
-    logStep("Keine Tool-Antwort erhalten");
     return [];
   }
 
   try {
     const parsed = JSON.parse(toolCall.function.arguments);
-    logStep("AI-Extraktion abgeschlossen", { prizeCount: parsed.prizes?.length || 0 });
     return parsed.prizes || [];
   } catch (e) {
     logStep("Fehler beim Parsen der AI-Antwort", { error: String(e) });
