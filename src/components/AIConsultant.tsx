@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Sparkles, Send, FileText, Route, Lock, Crown } from 'lucide-react';
 import { PricingModal } from '@/components/PricingModal';
 import { ComingSoonModal } from '@/components/ComingSoonModal';
+import { ApplicationLetterDialog } from '@/components/ApplicationLetterDialog';
 
 export function AIConsultant() {
   const { t } = useLanguage();
@@ -14,6 +15,7 @@ export function AIConsultant() {
   const [prompt, setPrompt] = useState('');
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  const [showApplicationLetterDialog, setShowApplicationLetterDialog] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState('');
 
   // Check if user has access: must be logged in AND (Pro OR Admin)
@@ -24,11 +26,13 @@ export function AIConsultant() {
       icon: FileText,
       titleKey: 'ai.feature1.title',
       descKey: 'ai.feature1.desc',
+      isActive: true, // Bewerbungsschreiben is now active!
     },
     {
       icon: Route,
       titleKey: 'ai.feature2.title',
       descKey: 'ai.feature2.desc',
+      isActive: false, // Bewerbungsfahrplan still under development
     },
   ];
 
@@ -36,12 +40,19 @@ export function AIConsultant() {
     setShowPricingModal(true);
   };
 
-  const handleFeatureClick = (featureTitle: string) => {
-    if (hasAccess) {
+  const handleFeatureClick = (featureTitle: string, isActive: boolean) => {
+    if (!hasAccess) {
+      setShowPricingModal(true);
+      return;
+    }
+    
+    if (isActive && featureTitle === t('ai.feature1.title')) {
+      // Open the actual Application Letter Dialog
+      setShowApplicationLetterDialog(true);
+    } else {
+      // Show "Coming Soon" for inactive features
       setSelectedFeature(featureTitle);
       setShowComingSoonModal(true);
-    } else {
-      setShowPricingModal(true);
     }
   };
 
@@ -68,14 +79,23 @@ export function AIConsultant() {
             {features.map((feature) => (
               <Card 
                 key={feature.titleKey} 
-                className="hover:shadow-card-hover transition-all duration-300 cursor-pointer"
-                onClick={() => handleFeatureClick(t(feature.titleKey))}
+                className={`hover:shadow-card-hover transition-all duration-300 cursor-pointer ${
+                  feature.isActive ? 'ring-2 ring-accent/20' : ''
+                }`}
+                onClick={() => handleFeatureClick(t(feature.titleKey), feature.isActive)}
               >
                 <CardHeader>
                   <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
                     <feature.icon className="h-6 w-6 text-accent" />
                   </div>
-                  <CardTitle className="font-display text-xl">{t(feature.titleKey)}</CardTitle>
+                  <CardTitle className="font-display text-xl flex items-center gap-2">
+                    {t(feature.titleKey)}
+                    {!feature.isActive && (
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground font-normal">
+                        Coming Soon
+                      </span>
+                    )}
+                  </CardTitle>
                   <CardDescription>{t(feature.descKey)}</CardDescription>
                 </CardHeader>
               </Card>
@@ -145,6 +165,10 @@ export function AIConsultant() {
         isOpen={showComingSoonModal} 
         onClose={() => setShowComingSoonModal(false)}
         featureName={selectedFeature}
+      />
+      <ApplicationLetterDialog
+        isOpen={showApplicationLetterDialog}
+        onClose={() => setShowApplicationLetterDialog(false)}
       />
     </section>
   );
