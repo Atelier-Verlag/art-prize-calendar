@@ -105,7 +105,18 @@ export function ApplicationLetterDialog({ isOpen, onClose }: ApplicationLetterDi
     setIsLoading(true);
     setGeneratedLetter('');
 
-    const userMessage = language === 'de' 
+    // Detect language from prize name and description to write the letter in the appropriate language
+    const tenderText = `${prizeName} ${prizeDescription}`.toLowerCase();
+    const germanIndicators = ['preis', 'stipendium', 'ausstellung', 'bewerbung', 'förderung', 'kunst', 'künstler', 'galerie', 'deutschland', 'österreich', 'schweiz'];
+    const englishIndicators = ['prize', 'grant', 'exhibition', 'application', 'artist', 'gallery', 'residency', 'award', 'competition', 'call for'];
+    
+    const germanScore = germanIndicators.filter(word => tenderText.includes(word)).length;
+    const englishScore = englishIndicators.filter(word => tenderText.includes(word)).length;
+    
+    // Default to English if more English indicators, otherwise use German
+    const tenderLanguage = englishScore > germanScore ? 'en' : 'de';
+
+    const userMessage = tenderLanguage === 'de' 
       ? `Bitte erstelle ein professionelles Bewerbungsschreiben für den Kunstpreis "${prizeName}". 
       
 Informationen über mich:
@@ -114,7 +125,7 @@ Informationen über mich:
 
 ${prizeDescription ? `Beschreibung des Preises: ${prizeDescription}` : ''}
 
-Das Schreiben sollte professionell, überzeugend und auf den Preis zugeschnitten sein. Bitte formatiere es als fertigen Brief.`
+Das Schreiben sollte professionell, überzeugend und auf den Preis zugeschnitten sein. Bitte formatiere es als fertigen Brief auf Deutsch.`
       : `Please create a professional application letter for the art prize "${prizeName}".
 
 Information about me:
@@ -123,7 +134,7 @@ Information about me:
 
 ${prizeDescription ? `Prize description: ${prizeDescription}` : ''}
 
-The letter should be professional, compelling, and tailored to the prize. Please format it as a complete letter.`;
+The letter should be professional, compelling, and tailored to the prize. Please format it as a complete letter in English.`;
 
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-consultant`, {
