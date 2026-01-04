@@ -6,6 +6,7 @@ import type { ArtPrize } from '@/hooks/useArtPrizes';
 import { formatCurrency } from '@/hooks/useArtPrizes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { MapPin, Lock, Crown, AlertTriangle, ThumbsDown } from 'lucide-react';
 import {
   HoverCard,
@@ -13,6 +14,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
 import { PricingModal } from '@/components/PricingModal';
+import { SeminarWaitlistForm } from '@/components/SeminarWaitlistForm';
 interface CalendarCardProps {
   prize: ArtPrize;
   onClick: () => void;
@@ -157,6 +159,12 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
                   {t('blacksheep.archiveLink')}
                 </a>
               </p>
+              
+              {/* Seminar Waitlist Section */}
+              <Separator className="my-4" />
+              <div onClick={(e) => e.stopPropagation()}>
+                <SeminarWaitlistForm />
+              </div>
             </div>
           </HoverCardContent>
         </HoverCard>

@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut, Calendar } from 'lucide-react';
 import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
+import { SeminarWaitlistManager } from '@/components/admin/SeminarWaitlistManager';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -896,6 +897,9 @@ export default function Admin() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Seminar Waitlist Manager Section */}
+            <SeminarWaitlistManager />
 
             {/* Art Prizes Manager Section */}
             <ArtPrizesManager />
