@@ -38,14 +38,14 @@ export function Footer() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <a
-              href="https://stripe.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Powered by Stripe
-            </a>
+          <a
+            href="https://stripe.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Powered by Stripe
+          </a>
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Kunstpreiskalender
             </p>
