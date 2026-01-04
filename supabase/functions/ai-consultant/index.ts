@@ -18,32 +18,108 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are an experienced art consultant helping artists write compelling applications for art prizes, grants, and residencies.
+    const normalizeDescription = (desc: string | undefined | null) => {
+      const d = (desc || "").trim();
+      if (!d) return "";
+      const lower = d.toLowerCase();
+      if (
+        lower === "keine beschreibung vorhanden." ||
+        lower === "keine beschreibung vorhanden" ||
+        lower === "no description provided." ||
+        lower === "no description provided"
+      ) {
+        return "";
+      }
+      return d;
+    };
 
-CRITICAL LANGUAGE RULE: First, detect the language of the tender title and description below. If the tender is in English, you MUST write your entire response in English. If the tender is in German, write in German. The output language must match the tender's language.
+    const detectTenderLanguage = (raw: string): "de" | "en" => {
+      const text = (raw || "").toLowerCase();
+      if (!text.trim()) return "en";
+
+      const hasUmlauts = /[äöüß]/i.test(text);
+      const germanHits = [
+        " und ", " der ", " die ", " das ", " nicht ", " mit ", " für ", " bewerbung", " ausschreibung",
+        " stipendium", " kunst", " künstler", " teilnahme", " voraussetzung", " einreichung",
+      ].filter((w) => text.includes(w)).length;
+
+      const englishHits = [
+        " the ", " and ", " you ", " your ", " application", " residency", " grant", " call for",
+        " requirements", " submission", " deadline", " eligible",
+      ].filter((w) => text.includes(w)).length;
+
+      if (hasUmlauts) return "de";
+      if (englishHits > germanHits) return "en";
+      if (germanHits > 0) return "de";
+      return "en";
+    };
+
+    const safeDescription = normalizeDescription(prize?.description);
+    const tenderLang = detectTenderLanguage(`${prize?.name || ""}\n${safeDescription}`);
+    const userLang = detectTenderLanguage(userMessage || "");
+
+    const systemPrompt =
+      tenderLang === "de"
+        ? `Du bist ein erfahrener Kunstberater und hilfst Künstler:innen dabei, überzeugende Bewerbungen für Kunstpreise, Förderungen und Residenzen zu schreiben.
+
+Die Ausschreibung ist auf Deutsch. Du MUSST deine gesamte Antwort vollständig auf Deutsch verfassen. Verwende keine englischen Anweisungen oder Mischsprache.
+
+Aufgaben:
+1) Ausschreibung analysieren und konkrete Tipps geben
+2) Bewerbungs-/Motivationsschreiben strukturieren
+3) Formulierungen verbessern
+4) Einen Bewerbungs-Fahrplan vorschlagen
+
+Ausschreibungsdetails:
+Name: ${prize.name}
+Organisator: ${prize.organizer}
+Kategorie: ${prize.category}
+Deadline: ${prize.deadline}
+${prize.prizeAmount ? `Preisgeld: ${prize.prizeAmount}€` : "Kein Preisgeld angegeben"}
+Region: ${prize.region}, ${prize.country}
+${prize.ageMin || prize.ageMax ? `Altersbegrenzung: ${prize.ageMin || "keine"} - ${prize.ageMax || "keine"}` : ""}
+${prize.fee ? `Bewerbungsgebühr: ${prize.fee}€` : "Keine Gebühr"}
+
+Beschreibung: ${safeDescription || "(keine Beschreibung)"}
+
+Anforderungen:
+${(prize.requirements || []).map((r: string) => `- ${r}`).join("\n")}
+
+Ton: professionell, aber zugänglich.`
+        : `You are an experienced art consultant helping artists write compelling applications for art prizes, grants, and residencies.
+
+The tender language is English. You MUST write your entire response fully in English. Do not include German instructions or mixed language.
 
 Your tasks:
-1. Analyze the call details and provide concrete tips
-2. Help structure application letters
-3. Give feedback on wording
-4. Create an application roadmap with timeline
+1) Analyze the call and give concrete tips
+2) Structure an application/motivation letter
+3) Improve wording
+4) Suggest an application roadmap
 
 Call details:
 Name: ${prize.name}
 Organizer: ${prize.organizer}
 Category: ${prize.category}
 Deadline: ${prize.deadline}
-${prize.prizeAmount ? `Prize amount: ${prize.prizeAmount}€` : 'No prize amount specified'}
+${prize.prizeAmount ? `Prize amount: €${prize.prizeAmount}` : "No prize amount specified"}
 Region: ${prize.region}, ${prize.country}
-${prize.ageMin || prize.ageMax ? `Age restriction: ${prize.ageMin || 'none'} - ${prize.ageMax || 'none'}` : ''}
-${prize.fee ? `Application fee: ${prize.fee}€` : 'No fee'}
+${prize.ageMin || prize.ageMax ? `Age restriction: ${prize.ageMin || "none"} - ${prize.ageMax || "none"}` : ""}
+${prize.fee ? `Application fee: €${prize.fee}` : "No fee"}
 
-Description: ${prize.description}
+Description: ${safeDescription || "(no description)"}
 
 Requirements:
-${prize.requirements.map((r: string) => `- ${r}`).join('\n')}
+${(prize.requirements || []).map((r: string) => `- ${r}`).join("\n")}
 
-Be professional yet approachable. Remember: respond in the SAME LANGUAGE as the tender description above.`;
+Tone: professional but approachable.`;
+
+    // Avoid mixing languages: if user request language differs from tender language, use a neutral request in the tender language.
+    const effectiveUserPrompt =
+      userMessage && userLang === tenderLang
+        ? userMessage
+        : tenderLang === "de"
+          ? "Bitte hilf mir bei meiner Bewerbung auf Grundlage der Ausschreibungsdetails oben. Falls sinnvoll, entwerfe ein vollständiges Bewerbungsschreiben und gib konkrete Verbesserungsvorschläge."
+          : "Please help me with my application based on the call details above. If appropriate, draft a complete application letter and provide concrete improvement suggestions.";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -55,7 +131,7 @@ Be professional yet approachable. Remember: respond in the SAME LANGUAGE as the 
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
+          { role: "user", content: effectiveUserPrompt },
         ],
         stream: true,
       }),
