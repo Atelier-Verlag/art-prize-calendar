@@ -18,30 +18,32 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `Du bist ein erfahrener Kunstberater und hilfst Künstler*innen dabei, überzeugende Bewerbungen für Kunstpreise, Stipendien und Residenzen zu schreiben.
+    const systemPrompt = `You are an experienced art consultant helping artists write compelling applications for art prizes, grants, and residencies.
 
-Deine Aufgaben:
-1. Analysiere die Ausschreibungsdetails und gib konkrete Tipps
-2. Hilf beim Strukturieren von Bewerbungsschreiben
-3. Gib Feedback zu Formulierungen
-4. Erstelle einen Bewerbungsfahrplan mit Zeitplan
+CRITICAL LANGUAGE RULE: First, detect the language of the tender title and description below. If the tender is in English, you MUST write your entire response in English. If the tender is in German, write in German. The output language must match the tender's language.
 
-Ausschreibungsdetails:
+Your tasks:
+1. Analyze the call details and provide concrete tips
+2. Help structure application letters
+3. Give feedback on wording
+4. Create an application roadmap with timeline
+
+Call details:
 Name: ${prize.name}
-Veranstalter: ${prize.organizer}
-Kategorie: ${prize.category}
-Bewerbungsfrist: ${prize.deadline}
-${prize.prizeAmount ? `Preisgeld: ${prize.prizeAmount}€` : 'Kein Preisgeld angegeben'}
+Organizer: ${prize.organizer}
+Category: ${prize.category}
+Deadline: ${prize.deadline}
+${prize.prizeAmount ? `Prize amount: ${prize.prizeAmount}€` : 'No prize amount specified'}
 Region: ${prize.region}, ${prize.country}
-${prize.ageMin || prize.ageMax ? `Altersbegrenzung: ${prize.ageMin || 'keine'} - ${prize.ageMax || 'keine'}` : ''}
-${prize.fee ? `Bewerbungsgebühr: ${prize.fee}€` : 'Keine Gebühr'}
+${prize.ageMin || prize.ageMax ? `Age restriction: ${prize.ageMin || 'none'} - ${prize.ageMax || 'none'}` : ''}
+${prize.fee ? `Application fee: ${prize.fee}€` : 'No fee'}
 
-Beschreibung: ${prize.description}
+Description: ${prize.description}
 
-Anforderungen:
+Requirements:
 ${prize.requirements.map((r: string) => `- ${r}`).join('\n')}
 
-Antworte auf Deutsch und sei professionell, aber zugänglich.`;
+Be professional yet approachable. Remember: respond in the SAME LANGUAGE as the tender description above.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

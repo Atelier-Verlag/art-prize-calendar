@@ -23,44 +23,22 @@ serve(async (req) => {
     const today = new Date();
     const weeksUntilDeadline = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 7));
 
-    const systemPrompt = language === 'de' 
-      ? `Du bist ein erfahrener Kunstberater, der Künstlern hilft, sich auf Ausschreibungen vorzubereiten.
-         Erstelle einen detaillierten Bewerbungsfahrplan basierend auf der Ausschreibung und der Frist.
-         Der Fahrplan sollte praktische, zeitlich geordnete Schritte enthalten.
-         Berücksichtige dass ${weeksUntilDeadline} Wochen bis zur Frist sind.`
-      : language === 'fr'
-      ? `Vous êtes un conseiller artistique expérimenté qui aide les artistes à préparer leurs candidatures.
-         Créez un plan détaillé basé sur l'appel et la date limite.
-         Le plan doit contenir des étapes pratiques et chronologiques.
-         Il reste ${weeksUntilDeadline} semaines avant la date limite.`
-      : `You are an experienced art consultant helping artists prepare for open calls.
-         Create a detailed application roadmap based on the tender and deadline.
-         The roadmap should contain practical, time-ordered steps.
-         There are ${weeksUntilDeadline} weeks until the deadline.`;
+    // System prompt with automatic language detection
+    const systemPrompt = `You are an experienced art consultant helping artists prepare for open calls.
 
-    const userPrompt = language === 'de'
-      ? `Erstelle einen Bewerbungsfahrplan für diese Ausschreibung:
+CRITICAL LANGUAGE RULE: First, detect the language of the tender description provided below. If the tender description is in English, you MUST write your entire response (all week labels, titles, and tasks) in English. If it is in German, write everything in German. The output language must match the tender's language.
 
-Beschreibung: ${tenderDescription}
-Frist: ${deadline}
-${requirements ? `Anforderungen: ${requirements}` : ''}
+Create a detailed application roadmap based on the tender and deadline.
+The roadmap should contain practical, time-ordered steps.
+There are ${weeksUntilDeadline} weeks until the deadline.`;
 
-Erstelle 4-6 Zeitabschnitte mit konkreten Aufgaben.`
-      : language === 'fr'
-      ? `Créez une feuille de route pour cette candidature:
-
-Description: ${tenderDescription}
-Date limite: ${deadline}
-${requirements ? `Exigences: ${requirements}` : ''}
-
-Créez 4-6 périodes avec des tâches concrètes.`
-      : `Create an application roadmap for this tender:
+    const userPrompt = `Create an application roadmap for this tender:
 
 Description: ${tenderDescription}
 Deadline: ${deadline}
 ${requirements ? `Requirements: ${requirements}` : ''}
 
-Create 4-6 time periods with concrete tasks.`;
+Create 4-6 time periods with concrete tasks. Remember to write in the SAME LANGUAGE as the tender description above.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
