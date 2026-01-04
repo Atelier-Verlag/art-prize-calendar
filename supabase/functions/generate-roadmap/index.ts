@@ -11,34 +11,72 @@ serve(async (req) => {
   }
 
   try {
-    const { tenderDescription, deadline, requirements, language } = await req.json();
+    const { tenderDescription, deadline, requirements } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const detectTenderLanguage = (raw: string): "de" | "en" => {
+      const text = (raw || "").toLowerCase();
+      if (!text.trim()) return "en";
+
+      const hasUmlauts = /[äöüß]/i.test(text);
+      const germanHits = [
+        " und ", " der ", " die ", " das ", " nicht ", " mit ", " für ", " bewerbung", " ausschreibung",
+        " stipendium", " kunst", " künstler", " teilnahme", " voraussetzung", " einreichung",
+      ].filter((w) => text.includes(w)).length;
+
+      const englishHits = [
+        " the ", " and ", " you ", " your ", " application", " residency", " grant", " call for",
+        " requirements", " submission", " deadline", " eligible",
+      ].filter((w) => text.includes(w)).length;
+
+      if (hasUmlauts) return "de";
+      if (englishHits > germanHits) return "en";
+      if (germanHits > 0) return "de";
+      return "en";
+    };
+
+    const tenderLang = detectTenderLanguage(`${tenderDescription}\n${requirements || ""}`);
+
     // Calculate weeks until deadline
     const deadlineDate = new Date(deadline);
     const today = new Date();
     const weeksUntilDeadline = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 7));
 
-    // System prompt with automatic language detection
-    const systemPrompt = `You are an experienced art consultant helping artists prepare for open calls.
+    const systemPrompt =
+      tenderLang === "de"
+        ? `Du bist ein erfahrener Kunstberater und hilfst Künstler:innen bei der Vorbereitung von Ausschreibungen.
 
-CRITICAL LANGUAGE RULE: First, detect the language of the tender description provided below. If the tender description is in English, you MUST write your entire response (all week labels, titles, and tasks) in English. If it is in German, write everything in German. The output language must match the tender's language.
+Die Ausschreibung ist auf Deutsch. Du MUSST deine gesamte Antwort vollständig auf Deutsch verfassen (Woche-Labels, Titel und Aufgaben).
 
-Create a detailed application roadmap based on the tender and deadline.
-The roadmap should contain practical, time-ordered steps.
+Erstelle einen detaillierten, realistischen Bewerbungs-Fahrplan basierend auf Ausschreibung und Deadline.
+Es sind ${weeksUntilDeadline} Wochen bis zur Deadline.`
+        : `You are an experienced art consultant helping artists prepare strong applications for open calls.
+
+The tender language is English. You MUST write your entire response fully in English (week labels, titles, and tasks).
+
+Create a detailed, realistic application roadmap based on the tender and deadline.
 There are ${weeksUntilDeadline} weeks until the deadline.`;
 
-    const userPrompt = `Create an application roadmap for this tender:
+    const userPrompt =
+      tenderLang === "de"
+        ? `Erstelle einen Bewerbungs-Fahrplan für diese Ausschreibung:
+
+Beschreibung: ${tenderDescription}
+Deadline: ${deadline}
+${requirements ? `Anforderungen: ${requirements}` : ""}
+
+Erstelle 4–6 Zeitabschnitte mit konkreten Aufgaben.`
+        : `Create an application roadmap for this tender:
 
 Description: ${tenderDescription}
 Deadline: ${deadline}
-${requirements ? `Requirements: ${requirements}` : ''}
+${requirements ? `Requirements: ${requirements}` : ""}
 
-Create 4-6 time periods with concrete tasks. Remember to write in the SAME LANGUAGE as the tender description above.`;
+Create 4–6 time periods with concrete tasks.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

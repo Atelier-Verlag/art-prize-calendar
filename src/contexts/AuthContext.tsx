@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.open(data.url, '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       console.error('Checkout error:', err);
