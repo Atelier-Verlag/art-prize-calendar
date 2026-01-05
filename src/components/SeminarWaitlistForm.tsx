@@ -35,11 +35,11 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase
+      const waitlistId = crypto.randomUUID();
+
+      const { error } = await supabase
         .from('seminar_waitlist')
-        .insert({ email: result.data, status: 'pending' })
-        .select('id')
-        .single();
+        .insert({ id: waitlistId, email: result.data, status: 'pending' });
 
       if (error) {
         throw error;
@@ -47,11 +47,16 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
 
       // Send confirmation email via Edge Function
       const { error: emailError } = await supabase.functions.invoke('send-waitlist-confirmation', {
-        body: { 
-          email: result.data, 
-          waitlistId: data.id 
-        }
+        body: {
+          email: result.data,
+          waitlistId,
+        },
       });
+
+      if (emailError) {
+        console.error('Error sending confirmation email:', emailError);
+        // Don't throw - user is still on the waitlist, just email failed
+      }
 
       if (emailError) {
         console.error('Error sending confirmation email:', emailError);
