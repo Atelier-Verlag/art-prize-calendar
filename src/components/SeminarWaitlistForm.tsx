@@ -45,8 +45,8 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
 
       setIsSuccess(true);
       toast({
-        title: 'Du bist drauf!',
-        description: 'Wir melden uns, sobald es losgeht.',
+        title: 'Fast geschafft!',
+        description: 'Bitte prüfe deinen Posteingang und bestätige deine E-Mail-Adresse, um die Anmeldung abzuschließen.',
       });
       onSuccess?.();
     } catch (error: any) {
@@ -65,7 +65,7 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
     return (
       <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
         <CheckCircle className="h-5 w-5 shrink-0" />
-        <span className="text-sm font-medium">Du bist drauf!</span>
+        <span className="text-sm font-medium">Fast geschafft! Prüfe deinen Posteingang.</span>
       </div>
     );
   }
@@ -74,10 +74,13 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-foreground font-semibold">
         <GraduationCap className="h-5 w-5 text-primary" />
-        <span>Lerne, wie du seriöse Ausschreibungen erkennst</span>
+        <span>Schluss mit unnötigen Kosten!</span>
       </div>
       <p className="text-sm text-muted-foreground">
-        Versteckte Kosten vermeiden und Stipendien gewinnen? Setz dich unverbindlich auf die Warteliste für unser kommendes Seminar.
+        Lerne, wie du seriöse Ausschreibungen sofort erkennst. Damit du dir die Gebühren sparst und dich voll darauf konzentrierst, Preise, Wettbewerbe und Stipendien wirklich zu gewinnen.
+      </p>
+      <p className="text-sm text-muted-foreground">
+        Setz dich unverbindlich auf die Warteliste für unsere kommenden Seminare.
       </p>
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
