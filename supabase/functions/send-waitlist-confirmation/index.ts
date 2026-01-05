@@ -38,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">🎨 Kunstkalender Seminare</h1>
+          <h1 style="color: white; margin: 0; font-size: 24px;">🎨 Kunstpreiskalender Seminare</h1>
         </div>
         
         <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Send email using Resend API directly
+    // Send email using Resend API with click tracking disabled
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -85,10 +85,13 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Kunstkalender <onboarding@resend.dev>",
+        from: "Kunstpreiskalender <onboarding@resend.dev>",
         to: [email],
-        subject: "Bitte bestätige deine Anmeldung zur Warteliste",
+        subject: "Kunstpreiskalender: Bitte bestätige deine Anmeldung",
         html: emailHtml,
+        headers: {
+          "X-Entity-Ref-ID": waitlistId,
+        },
       }),
     });
 
