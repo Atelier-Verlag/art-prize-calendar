@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Send email using Resend API with click tracking disabled
+    // Send email using Resend API
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -89,9 +89,6 @@ const handler = async (req: Request): Promise<Response> => {
         to: [email],
         subject: "Kunstpreiskalender: Bitte bestätige deine Anmeldung",
         html: emailHtml,
-        headers: {
-          "X-Entity-Ref-ID": waitlistId,
-        },
       }),
     });
 
