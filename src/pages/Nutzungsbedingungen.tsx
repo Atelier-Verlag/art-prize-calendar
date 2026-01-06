@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import DOMPurify from 'dompurify';
 
 export default function Nutzungsbedingungen() {
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ export default function Nutzungsbedingungen() {
 
             <div className="prose prose-lg dark:prose-invert">
               {content ? (
-                <div dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }} />
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.replace(/\n/g, '<br />')) }} />
               ) : (
                 <section className="space-y-6">
                   <p className="text-muted-foreground leading-relaxed">

@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FileText, Send, Loader2, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ApplicationLetterDialogProps {
   isOpen: boolean;
@@ -137,11 +138,21 @@ ${prizeDescription ? `Prize description: ${prizeDescription}` : ''}
 The letter should be professional, compelling, and tailored to the prize. Please format it as a complete letter in English.`;
 
     try {
+      // Get user session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error(language === 'de' 
+          ? 'Bitte melden Sie sich an, um diese Funktion zu nutzen.' 
+          : 'Please sign in to use this feature.');
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-consultant`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           prize: {
