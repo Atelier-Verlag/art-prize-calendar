@@ -1,3 +1,4 @@
+// Force redeploy - 2026-01-06
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
