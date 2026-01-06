@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import DOMPurify from 'dompurify';
 
 export default function Datenschutz() {
   const { t } = useLanguage();
@@ -54,7 +55,7 @@ export default function Datenschutz() {
 
             <div className="prose prose-lg dark:prose-invert">
               {content ? (
-                <div dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }} />
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.replace(/\n/g, '<br />')) }} />
               ) : (
                 <>
                   <section className="mb-8">
