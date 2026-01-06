@@ -44,7 +44,7 @@ export function Footer() {
             rel="noopener noreferrer"
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Powered by Stripe
+            Powered by Stripe.
           </a>
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Kunstpreiskalender.
