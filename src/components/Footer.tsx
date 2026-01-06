@@ -36,6 +36,12 @@ export function Footer() {
                 {t(link.key)}
               </Link>
             ))}
+            <Link
+              to="/auth"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+            >
+              Admin Login
+            </Link>
           </nav>
 
           <div className="flex items-center gap-4">
