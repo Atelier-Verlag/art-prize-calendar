@@ -47,7 +47,7 @@ export function Footer() {
             Powered by Stripe
           </a>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Kunstpreiskalender
+              © {new Date().getFullYear()} Kunstpreiskalender.
             </p>
           </div>
         </div>
