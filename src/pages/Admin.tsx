@@ -152,16 +152,17 @@ export default function Admin() {
           terms: '',
         };
 
-        // Fetch all content in one query
+        // Fetch all content in one query (type assertion for ungenerated types)
         const { data, error } = await supabase
-          .from('site_content')
+          .from('site_content' as any)
           .select('key, content');
 
         if (error) {
           console.error('Error loading site content:', error);
         } else if (data) {
           // Map each row to contentMap
-          for (const row of data) {
+          const rows = data as unknown as Array<{ key: string; content: string }>;
+          for (const row of rows) {
             const key = row.key as ContentKey;
             if (key in contentMap) {
               contentMap[key] = row.content || '';
@@ -240,9 +241,9 @@ export default function Admin() {
     console.log(`[Admin] Saving ${key} with content length: ${contents[key].length}`);
 
     try {
-      // Use upsert with explicit onConflict for the key column
+      // Use upsert with explicit onConflict for the key column (type assertion for ungenerated types)
       const { data, error } = await supabase
-        .from('site_content')
+        .from('site_content' as any)
         .upsert(
           { key, content: contents[key], updated_at: new Date().toISOString() },
           { onConflict: 'key' }
