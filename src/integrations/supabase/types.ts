@@ -182,6 +182,39 @@ export type Database = {
         }
         Relationships: []
       }
+      seminars: {
+        Row: {
+          created_at: string
+          date: string | null
+          description: string | null
+          id: string
+          is_black_sheep: boolean
+          link: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string | null
+          description?: string | null
+          id?: string
+          is_black_sheep?: boolean
+          link?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string | null
+          description?: string | null
+          id?: string
+          is_black_sheep?: boolean
+          link?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_content: {
         Row: {
           content: string
