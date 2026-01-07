@@ -158,7 +158,12 @@ export default function Admin() {
           .select('key, content');
 
         if (error) {
-          console.error('Error loading site content:', error);
+          console.error('[Admin] Error loading site content:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          });
         } else if (data) {
           // Map each row to contentMap
           const rows = data as unknown as Array<{ key: string; content: string }>;
@@ -251,7 +256,12 @@ export default function Admin() {
         .select();
 
       if (error) {
-        console.error('Error saving content:', error);
+        console.error('[Admin] Error saving content:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
         toast({
           title: 'Fehler beim Speichern',
           description: `${key} konnte nicht gespeichert werden: ${error.message}`,
