@@ -143,6 +143,10 @@ export default function Admin() {
 
   // Load existing content - always load for viewing, saving requires admin
   useEffect(() => {
+    // Debug: Log Supabase connection info
+    console.log('[Admin] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+    console.log('[Admin] Project ID:', import.meta.env.VITE_SUPABASE_PROJECT_ID);
+    
     const loadContent = async () => {
       try {
         const contentMap: Record<ContentKey, string> = {
@@ -720,6 +724,9 @@ export default function Admin() {
                     <p className="font-display font-bold text-destructive">ADMIN MODUS</p>
                     <p className="text-sm text-muted-foreground">
                       Sie bearbeiten die Website-Inhalte
+                    </p>
+                    <p className="text-xs text-muted-foreground font-mono mt-1">
+                      DB: {import.meta.env.VITE_SUPABASE_URL?.substring(0, 35)}...
                     </p>
                   </div>
                 </div>
