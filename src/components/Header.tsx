@@ -66,11 +66,14 @@ export function Header() {
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
           
-          {/* UNCONDITIONAL ADMIN BUTTON - Always visible for EVERYONE */}
+          {/* Admin button */}
           <Button
             size="sm"
             className="inline-flex bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
-            onClick={() => navigate('/admin')}
+            onClick={() => {
+              // Hard refresh to ensure fresh auth/permissions state
+              window.location.assign('/admin');
+            }}
           >
             <Shield className="h-4 w-4 mr-1" />
             Admin Login
@@ -171,8 +174,8 @@ export function Header() {
                     size="sm"
                     className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
                     onClick={() => {
-                      navigate('/admin');
                       setIsMenuOpen(false);
+                      window.location.assign('/admin');
                     }}
                   >
                     <Shield className="h-4 w-4 mr-2" />
@@ -202,8 +205,8 @@ export function Header() {
                     size="sm"
                     className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
                     onClick={() => {
-                      navigate('/admin');
                       setIsMenuOpen(false);
+                      window.location.assign('/admin');
                     }}
                   >
                     <Shield className="h-4 w-4 mr-2" />

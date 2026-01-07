@@ -26,12 +26,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const loadProfile = async (userId: string) => {
-    console.log('[Auth] Loading profile for user:', userId);
+    console.log('[Auth] Loading permissions for user:', userId);
+
     try {
-      // 1) Load profile for is_pro_user flag
+      // 1) Load profile for is_pro_user flag (NOT roles)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('is_pro_user, is_admin')
+        .select('is_pro_user')
         .eq('id', userId)
         .single();
 
@@ -42,61 +43,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsProUser(profile?.is_pro_user ?? false);
       }
 
-      // 2) Check admin role via user_roles table
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
+      // 2) Admin check: source of truth is user_roles via SECURITY DEFINER function
+      const { data: isAdminResult, error: isAdminError } = await supabase.rpc('is_admin', {
+        _user_id: userId,
+      });
 
-      if (roleError) {
-        console.error('[Auth] Error checking admin role:', roleError);
-        // Fallback: check is_admin on profile
-        const hasAdminInProfile = profile?.is_admin === true;
-        console.log('[Auth] Fallback to profile is_admin:', hasAdminInProfile);
-        setIsAdmin(hasAdminInProfile);
+      if (isAdminError) {
+        console.error('[Auth] Error checking admin role (rpc is_admin):', isAdminError);
+        setIsAdmin(false);
       } else {
-        const hasAdminRole = !!roleData;
-        console.log('[Auth] Admin role from user_roles:', hasAdminRole, roleData);
-        setIsAdmin(hasAdminRole);
+        const admin = Boolean(isAdminResult);
+        console.log('[Auth] Admin via rpc is_admin:', admin);
+        setIsAdmin(admin);
       }
     } catch (err) {
-      console.error('[Auth] Error loading profile:', err);
+      console.error('[Auth] Error loading permissions:', err);
+      setIsProUser(false);
+      setIsAdmin(false);
     }
   };
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer profile loading with setTimeout to prevent deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            loadProfile(session.user.id);
-          }, 0);
-        } else {
-          setIsProUser(false);
-          setIsAdmin(false);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
-        loadProfile(session.user.id);
+        // Keep loading=true until permissions are loaded
+        setLoading(true);
+        setTimeout(async () => {
+          await loadProfile(session.user.id);
+          setLoading(false);
+        }, 0);
+      } else {
+        setIsProUser(false);
+        setIsAdmin(false);
+        setLoading(false);
       }
-      
-      setLoading(false);
+    });
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        setLoading(true);
+        await loadProfile(session.user.id);
+        setLoading(false);
+      } else {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
