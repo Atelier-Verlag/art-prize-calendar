@@ -26,36 +26,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const loadProfile = async (userId: string) => {
+    console.log('[Auth] Loading profile for user:', userId);
     try {
       // 1) Load profile for is_pro_user flag
       const { data: profile, error: profileError } = await supabase
-        .from('profiles' as any)
-        .select('is_pro_user')
+        .from('profiles')
+        .select('is_pro_user, is_admin')
         .eq('id', userId)
         .single();
 
       if (profileError) {
-        console.error('Error loading profile:', profileError);
+        console.error('[Auth] Error loading profile:', profileError);
       } else {
-        setIsProUser((profile as any)?.is_pro_user ?? false);
+        console.log('[Auth] Profile loaded:', profile);
+        setIsProUser(profile?.is_pro_user ?? false);
       }
 
       // 2) Check admin role via user_roles table
       const { data: roleData, error: roleError } = await supabase
-        .from('user_roles' as any)
+        .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .eq('role', 'admin')
         .maybeSingle();
 
       if (roleError) {
-        console.error('Error checking admin role:', roleError);
-        setIsAdmin(false);
+        console.error('[Auth] Error checking admin role:', roleError);
+        // Fallback: check is_admin on profile
+        const hasAdminInProfile = profile?.is_admin === true;
+        console.log('[Auth] Fallback to profile is_admin:', hasAdminInProfile);
+        setIsAdmin(hasAdminInProfile);
       } else {
-        setIsAdmin(!!roleData);
+        const hasAdminRole = !!roleData;
+        console.log('[Auth] Admin role from user_roles:', hasAdminRole, roleData);
+        setIsAdmin(hasAdminRole);
       }
     } catch (err) {
-      console.error('Error loading profile:', err);
+      console.error('[Auth] Error loading profile:', err);
     }
   };
 
