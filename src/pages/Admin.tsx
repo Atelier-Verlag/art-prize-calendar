@@ -125,6 +125,18 @@ export default function Admin() {
   });
   const [activeContentKey, setActiveContentKey] = useState<ContentKey>('impressum');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<
+    | null
+    | {
+        key: ContentKey;
+        error: {
+          message: string;
+          code?: string | null;
+          details?: string | null;
+          hint?: string | null;
+        };
+      }
+  >(null);
   const [loadingContent, setLoadingContent] = useState(true);
   const [scraperRunning, setScraperRunning] = useState(false);
   const [scraperLogs, setScraperLogs] = useState<ScraperLog[]>([]);
@@ -247,6 +259,9 @@ export default function Admin() {
     }
 
     setSaving(true);
+    setSaveError(null);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    console.log('[Admin] Attempting to save to:', supabaseUrl);
     console.log(`[Admin] Saving ${key} with content length: ${contents[key].length}`);
 
     try {
@@ -260,18 +275,21 @@ export default function Admin() {
         .select();
 
       if (error) {
-        console.error('[Admin] Error saving content:', {
+        const errPayload = {
           message: error.message,
           code: error.code,
           details: error.details,
           hint: error.hint,
-        });
+        };
+        console.error('[Admin] Error saving content:', errPayload);
+        setSaveError({ key, error: errPayload });
         toast({
           title: 'Fehler beim Speichern',
           description: `${key} konnte nicht gespeichert werden: ${error.message}`,
           variant: 'destructive',
         });
       } else {
+        setSaveError(null);
         console.log(`[Admin] Successfully saved ${key}:`, data);
         toast({
           title: '✓ Gespeichert',
@@ -279,7 +297,14 @@ export default function Admin() {
         });
       }
     } catch (err) {
-      console.error('Unexpected error saving content:', err);
+      const fallback = {
+        message: err instanceof Error ? err.message : String(err),
+        code: null,
+        details: null,
+        hint: null,
+      };
+      console.error('[Admin] Unexpected error saving content:', err);
+      setSaveError({ key, error: fallback });
       toast({
         title: 'Unerwarteter Fehler',
         description: 'Ein unerwarteter Fehler ist aufgetreten.',
@@ -824,6 +849,12 @@ export default function Admin() {
                           {saving ? 'Speichern...' : 'Speichern'}
                         </Button>
                       </div>
+
+                      {saveError?.key === section.key && (
+                        <pre className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs whitespace-pre-wrap break-words">
+{JSON.stringify(saveError.error, null, 2)}
+                        </pre>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
