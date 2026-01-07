@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 type AuthView = 'login' | 'signup' | 'forgot-password';
 
 export default function Auth() {
-  const { user, signIn, signUp, loading, startCheckout } = useAuth();
+  const { user, signIn, signUp, signOut, loading, startCheckout } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,10 +40,9 @@ export default function Auth() {
         // User just logged in/signed up and has a pending checkout
         await startCheckout(priceId);
         navigate(returnTo);
-      } else if (user && !loading && !priceId) {
-        // Normal auth flow, redirect to returnTo or home
-        navigate(returnTo);
       }
+      // NOTE: we intentionally do NOT auto-redirect logged-in users here,
+      // so the /auth page can show an explicit Logout button for session clearing.
     };
 
     handlePostAuthCheckout();
@@ -180,6 +179,58 @@ export default function Auth() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Logged-in view (so users can explicitly clear session)
+  if (user && !isCheckoutFlow) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
+        <div className="w-full max-w-md mb-4">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+            <span>{language === 'de' ? 'Zurück zum Kalender' : 'Back to Calendar'}</span>
+          </Link>
+        </div>
+
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-gold">
+                <Calendar className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="font-display text-2xl">
+              {language === 'de' ? 'Sie sind angemeldet' : 'You are signed in'}
+            </CardTitle>
+            <CardDescription className="break-all">
+              {user.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              className="w-full"
+              onClick={() => navigate(returnTo)}
+            >
+              {language === 'de' ? 'Weiter' : 'Continue'}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={async () => {
+                await signOut();
+                // ensure all in-memory state is cleared
+                window.location.reload();
+              }}
+            >
+              {language === 'de' ? 'Abmelden (Session löschen)' : 'Logout (clear session)'}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
