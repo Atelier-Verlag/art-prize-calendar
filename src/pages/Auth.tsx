@@ -34,24 +34,28 @@ export default function Auth() {
   const returnTo = searchParams.get('returnTo') || '/';
   const isCheckoutFlow = !!priceId;
 
-  const launchCheckout = async (checkoutPriceId: string, retries = 3): Promise<void> => {
-    // Wait a moment for session to fully propagate
-    await new Promise((resolve) => setTimeout(resolve, 300));
+  const waitForSession = async (maxMs = 5000, intervalMs = 250) => {
+    const start = Date.now();
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    // Poll until a session exists (token propagation after signup can be slightly delayed)
+    while (Date.now() - start < maxMs) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session) {
-      if (retries > 0) {
-        // Retry after a short delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return launchCheckout(checkoutPriceId, retries - 1);
-      }
-      throw new Error('NO_SESSION');
+      if (session?.access_token && session.user?.id) return session;
+      await new Promise((r) => setTimeout(r, intervalMs));
     }
 
+    return null;
+  };
+
+  const launchCheckout = async (checkoutPriceId: string): Promise<void> => {
+    const session = await waitForSession();
+    if (!session) throw new Error('NO_SESSION');
+
     const { data, error } = await supabase.functions.invoke('create-checkout', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
       body: { priceId: checkoutPriceId },
     });
 
@@ -72,17 +76,22 @@ export default function Auth() {
           await launchCheckout(priceId);
           navigate(returnTo);
         } catch (err: any) {
-          console.error('Checkout error:', err);
-          toast({
-            title: language === 'de' ? 'Fehler' : 'Error',
-            description:
-              language === 'de'
-                ? 'Checkout konnte nicht gestartet werden. Bitte versuchen Sie es erneut.'
-                : 'Unable to start checkout. Please try again.',
-            variant: 'destructive',
-          });
+          // If session isn't ready yet, don't error-toast; let the fallback button appear.
+          if (err?.message === 'NO_SESSION') {
+            setCheckoutTimeout(true);
+          } else {
+            console.error('Checkout error:', err);
+            toast({
+              title: language === 'de' ? 'Fehler' : 'Error',
+              description:
+                language === 'de'
+                  ? 'Checkout konnte nicht gestartet werden. Bitte versuchen Sie es erneut.'
+                  : 'Unable to start checkout. Please try again.',
+              variant: 'destructive',
+            });
+            setCheckoutTimeout(true);
+          }
           setIsProcessingCheckout(false);
-          setCheckoutTimeout(true); // Show manual button
         }
       }
     };
