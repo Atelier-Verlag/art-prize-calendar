@@ -317,8 +317,23 @@ export default function Admin() {
   };
 
   const invokeFetchPrizes = async (payload?: Record<string, unknown>) => {
+    // Log environment for production debugging
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    
+    console.log('[Admin] invokeFetchPrizes called');
+    console.log('[Admin] SUPABASE_URL:', supabaseUrl || 'UNDEFINED');
+    console.log('[Admin] SUPABASE_KEY present:', !!supabaseKey);
+    
+    if (!supabaseUrl || !supabaseKey) {
+      const errorMsg = `Missing env vars: URL=${!!supabaseUrl}, KEY=${!!supabaseKey}`;
+      console.error('[Admin] CRITICAL:', errorMsg);
+      throw new Error(errorMsg);
+    }
+
     // Prefer the official client invocation to avoid CORS/network issues and to
     // guarantee we target the currently-configured backend project.
+    console.log('[Admin] Calling supabase.functions.invoke("fetch-prizes")...');
     const { data, error } = await supabase.functions.invoke('fetch-prizes', {
       body: payload ?? {},
     });
@@ -326,11 +341,13 @@ export default function Admin() {
     if (error) {
       // Surface the full object for debugging (status/message/context)
       console.error('[Admin] fetch-prizes invoke error:', error);
+      console.error('[Admin] Error details:', JSON.stringify(error, null, 2));
       const e: Error & { context?: unknown } = new Error(error.message);
       e.context = error;
       throw e;
     }
 
+    console.log('[Admin] fetch-prizes success, data:', data);
     return { data, via: 'invoke' as const };
   };
 
