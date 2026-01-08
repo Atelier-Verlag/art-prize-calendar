@@ -45,6 +45,10 @@ interface ExtractedPrize {
   prize_amount: number | null;
   eligibility_restriction: string | null;
   isDraft?: boolean;
+  // New fields for tenders extraction
+  age_limit: string | null;
+  artist_fee: boolean | null;
+  entry_fee: number | null;
 }
 
 async function searchWithTavily(query: string, apiKey: string): Promise<TavilyResult[]> {
@@ -148,6 +152,25 @@ KATEGORISIERUNGS-REGELN (STRIKT BEFOLGEN - basierend auf Titel UND Beschreibung)
 
 7. "Wettbewerb" = Standard-Fallback für Wettbewerbe mit Jurierung die nicht in andere Kategorien passen
 
+NEUE FELDER - AKTIV SUCHEN UND EXTRAHIEREN:
+
+8. ALTERSBEGRENZUNG (age_limit):
+   - Suche nach Phrasen wie: "bis 35 Jahre", "unter 40", "born after 1990", "up to 35 years", "max. 30 Jahre", "keine Altersbegrenzung", "no age limit", "open to all ages"
+   - Wenn gefunden -> extrahiere als Text (z.B. "unter 35", "bis 40 Jahre", "geboren nach 1985")
+   - Wenn explizit "keine Altersbegrenzung" oder "no age limit" -> setze auf "none"
+   - Wenn keine Information gefunden -> null
+
+9. KÜNSTLERHONORAR (artist_fee):
+   - AKTIV suchen nach: "honorarium", "Honorar", "exhibition fee", "Ausstellungshonorar", "artist payment", "Künstlerhonorar", "Aufwandsentschädigung", "compensation"
+   - Wenn solche Zahlungen AN den Künstler erwähnt werden -> true
+   - Wenn nicht gefunden oder unklar -> false
+
+10. TEILNAHMEGEBÜHR (entry_fee):
+    - Suche nach: "application fee", "Bewerbungsgebühr", "handling fee", "Bearbeitungsgebühr", "submission fee", "entry fee", "Teilnahmegebühr"
+    - Wenn monetärer Wert gefunden (z.B. "20€", "$30", "25 EUR") -> extrahiere als Zahl
+    - Wenn "free", "kostenlos", "no fee", "gebührenfrei" -> setze auf 0
+    - Wenn nicht gefunden -> null
+
 Für jeden gefundenen Eintrag extrahiere:
 - name: Titel der Ausschreibung
 - deadline: Datum im Format YYYY-MM-DD (MUSS in der Zukunft liegen!)
@@ -157,9 +180,12 @@ Für jeden gefundenen Eintrag extrahiere:
 - region: Region/Stadt (z.B. "Berlin", "Bayern", "Europa")
 - country: Land (z.B. "Deutschland", "Österreich", "International")
 - category: STRIKT basierend auf obigen Regeln - wähle die PASSENDSTE Kategorie!
-- fee: Teilnahmegebühr in Euro (null wenn kostenlos oder unbekannt)
+- fee: Teilnahmegebühr in Euro (null wenn kostenlos oder unbekannt) - DEPRECATED, use entry_fee
 - prize_amount: Preisgeld in Euro (null wenn unbekannt)
-- eligibility_restriction: Lokale Einschränkungen (z.B. "Nur für in Köln lebende Künstler") oder null wenn offen`;
+- eligibility_restriction: Lokale Einschränkungen (z.B. "Nur für in Köln lebende Künstler") oder null wenn offen
+- age_limit: Altersbegrenzung als Text oder null
+- artist_fee: true wenn Künstlerhonorar gezahlt wird, sonst false
+- entry_fee: Teilnahmegebühr als Zahl in Euro (0 wenn kostenlos, null wenn unbekannt)`;
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -202,6 +228,9 @@ Für jeden gefundenen Eintrag extrahiere:
                       fee: { type: "number", nullable: true },
                       prize_amount: { type: "number", nullable: true },
                       eligibility_restriction: { type: "string", nullable: true, description: "Lokale Einschränkungen wie 'Nur für Kölner Künstler' oder null" },
+                      age_limit: { type: "string", nullable: true, description: "Altersbegrenzung z.B. 'unter 35', 'bis 40 Jahre', 'none' wenn keine Begrenzung, null wenn unbekannt" },
+                      artist_fee: { type: "boolean", description: "true wenn Künstlerhonorar gezahlt wird, false wenn nicht" },
+                      entry_fee: { type: "number", nullable: true, description: "Teilnahmegebühr in Euro, 0 wenn kostenlos, null wenn unbekannt" },
                     },
                     required: ["name", "deadline", "website", "description", "organizer", "region", "country", "category"],
                   },
@@ -256,6 +285,9 @@ function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
       prize_amount: null,
       eligibility_restriction: null,
       isDraft: true,
+      age_limit: null,
+      artist_fee: false,
+      entry_fee: null,
     }));
 }
 
@@ -530,6 +562,64 @@ serve(async (req) => {
           } else {
             newPrizesCount++;
             logStep(`Neu gespeichert: ${prize.name}${prize.isDraft ? ' (Entwurf)' : ''}`);
+          }
+        }
+
+        // ALSO SAVE TO TENDERS TABLE with the new fields
+        // Check if already exists in tenders by application_link
+        const { data: existingTender } = await supabaseClient
+          .from("tenders")
+          .select("id")
+          .eq("application_link", prize.website)
+          .maybeSingle();
+
+        if (existingTender) {
+          // Update existing tender with new fields
+          const { error: tenderUpdateError } = await supabaseClient
+            .from("tenders")
+            .update({
+              title: prize.name,
+              deadline: prize.deadline,
+              description: prize.description,
+              organizer: prize.organizer,
+              location: prize.region,
+              category: safeCategory,
+              entry_fee: prize.entry_fee,
+              artist_fee: prize.artist_fee ?? false,
+              age_limit: prize.age_limit,
+              prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
+              geo_scope: prize.country,
+            })
+            .eq("id", existingTender.id);
+
+          if (tenderUpdateError) {
+            logStep(`Fehler beim Aktualisieren von Tender "${prize.name}"`, { error: tenderUpdateError.message });
+          } else {
+            logStep(`Tender aktualisiert: ${prize.name}`);
+          }
+        } else {
+          // Insert new tender
+          const { error: tenderInsertError } = await supabaseClient
+            .from("tenders")
+            .insert({
+              title: prize.name,
+              deadline: prize.deadline,
+              application_link: prize.website,
+              description: prize.description,
+              organizer: prize.organizer,
+              location: prize.region,
+              category: safeCategory,
+              entry_fee: prize.entry_fee,
+              artist_fee: prize.artist_fee ?? false,
+              age_limit: prize.age_limit,
+              prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
+              geo_scope: prize.country,
+            });
+
+          if (tenderInsertError) {
+            logStep(`Fehler beim Speichern von Tender "${prize.name}"`, { error: tenderInsertError.message });
+          } else {
+            logStep(`Tender gespeichert: ${prize.name}`);
           }
         }
       }
