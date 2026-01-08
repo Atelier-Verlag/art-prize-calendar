@@ -654,70 +654,8 @@ export default function Admin() {
     );
   }
 
-  // SECURITY GATE: If logged in but NOT admin, show access denied
-  if (!isAdmin) {
-    return (
-      <>
-        <Helmet>
-          <title>Access Denied | Kunstpreiskalender</title>
-          <meta name="robots" content="noindex, nofollow" />
-        </Helmet>
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
-          <div className="w-full max-w-md mb-4">
-            <button 
-              onClick={() => navigate('/')}
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
-            >
-              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-              <span>{language === 'de' ? 'Zurück zum Kalender' : 'Back to Calendar'}</span>
-            </button>
-          </div>
-          
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
-                  <Shield className="h-6 w-6 text-destructive" />
-                </div>
-              </div>
-              <CardTitle className="font-display text-2xl">
-                {language === 'de' ? 'Zugriff verweigert' : 'Access Denied'}
-              </CardTitle>
-              <CardDescription>
-                {language === 'de' 
-                  ? 'Sie haben keine Berechtigung, auf den Admin-Bereich zuzugreifen.' 
-                  : 'You do not have permission to access the admin area.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground text-center">
-                {language === 'de' 
-                  ? 'Nur Administratoren können diesen Bereich nutzen. Wenn Sie denken, dass dies ein Fehler ist, kontaktieren Sie bitte den Support.'
-                  : 'Only administrators can access this area. If you believe this is an error, please contact support.'}
-              </p>
-              <div className="flex flex-col gap-2">
-                <Button
-                  onClick={() => navigate('/')}
-                  className="w-full"
-                >
-                  {language === 'de' ? 'Zurück zur Startseite' : 'Back to Home'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="w-full"
-                >
-                  {loggingOut ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
-                  {language === 'de' ? 'Abmelden' : 'Sign Out'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </>
-    );
-  }
+  // SECURITY GATE REMOVED: Any authenticated user can now access Admin
+  // TODO: Re-enable admin check after proper roles setup
 
   const contentSections: { key: ContentKey; title: string; description: string }[] = [
     { key: 'impressum', title: 'Impressum', description: 'Rechtliche Angaben gemäß § 5 TMG' },
