@@ -34,12 +34,20 @@ export default function Auth() {
   const returnTo = searchParams.get('returnTo') || '/';
   const isCheckoutFlow = !!priceId;
 
-  const launchCheckout = async (checkoutPriceId: string) => {
+  const launchCheckout = async (checkoutPriceId: string, retries = 3): Promise<void> => {
+    // Wait a moment for session to fully propagate
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
     if (!session) {
+      if (retries > 0) {
+        // Retry after a short delay
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        return launchCheckout(checkoutPriceId, retries - 1);
+      }
       throw new Error('NO_SESSION');
     }
 
@@ -64,26 +72,17 @@ export default function Auth() {
           await launchCheckout(priceId);
           navigate(returnTo);
         } catch (err: any) {
-          if (err?.message === 'NO_SESSION') {
-            toast({
-              title: language === 'de' ? 'Bitte anmelden' : 'Please log in',
-              description:
-                language === 'de'
-                  ? 'Bitte melden Sie sich an, um zur Zahlung weiterzugehen.'
-                  : 'Please sign in to proceed to payment.',
-              variant: 'destructive',
-            });
-          } else {
-            toast({
-              title: language === 'de' ? 'Fehler' : 'Error',
-              description:
-                language === 'de'
-                  ? 'Checkout konnte nicht gestartet werden.'
-                  : 'Unable to start checkout.',
-              variant: 'destructive',
-            });
-          }
+          console.error('Checkout error:', err);
+          toast({
+            title: language === 'de' ? 'Fehler' : 'Error',
+            description:
+              language === 'de'
+                ? 'Checkout konnte nicht gestartet werden. Bitte versuchen Sie es erneut.'
+                : 'Unable to start checkout. Please try again.',
+            variant: 'destructive',
+          });
           setIsProcessingCheckout(false);
+          setCheckoutTimeout(true); // Show manual button
         }
       }
     };
@@ -158,35 +157,16 @@ export default function Auth() {
       setIsSubmitting(false);
     } else {
       setSignupComplete(true);
-
-      // If auto-login isn't immediate for any reason, push user to login first.
-      // We keep priceId in the URL, so the checkout auto-starts right after login.
-      if (isCheckoutFlow) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          toast({
-            title: language === 'de' ? 'Bitte anmelden' : 'Please log in',
-            description:
-              language === 'de'
-                ? 'Bitte melden Sie sich jetzt an – danach geht es automatisch zur Zahlung weiter.'
-                : 'Please sign in now—then we will automatically continue to payment.',
-          });
-          setView('login');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
+      
+      // With auto-confirm enabled, Supabase auto-logs in the user.
+      // The useEffect watching `user` will trigger checkout once session propagates.
       toast({
         title: language === 'de' ? 'Erfolgreich registriert!' : 'Successfully registered!',
         description: isCheckoutFlow
           ? (language === 'de' ? 'Weiterleitung zur Zahlung...' : 'Redirecting to checkout...')
           : (language === 'de' ? 'Willkommen!' : 'Welcome!'),
       });
-      // Keep isSubmitting true - checkout effect or timeout fallback will resolve the UI.
+      // Keep isSubmitting true - the checkout useEffect will handle the rest
     }
   };
 
@@ -529,25 +509,15 @@ export default function Auth() {
                         await launchCheckout(priceId!);
                         navigate(returnTo);
                       } catch (err: any) {
-                        if (err?.message === 'NO_SESSION') {
-                          toast({
-                            title: language === 'de' ? 'Bitte anmelden' : 'Please log in',
-                            description:
-                              language === 'de'
-                                ? 'Bitte melden Sie sich jetzt an – danach geht es automatisch zur Zahlung weiter.'
-                                : 'Please sign in now—then we will automatically continue to payment.',
-                          });
-                          setView('login');
-                        } else {
-                          toast({
-                            title: language === 'de' ? 'Fehler' : 'Error',
-                            description:
-                              language === 'de'
-                                ? 'Checkout konnte nicht gestartet werden.'
-                                : 'Unable to start checkout.',
-                            variant: 'destructive',
-                          });
-                        }
+                        console.error('Manual checkout error:', err);
+                        toast({
+                          title: language === 'de' ? 'Fehler' : 'Error',
+                          description:
+                            language === 'de'
+                              ? 'Checkout konnte nicht gestartet werden. Bitte versuchen Sie es erneut.'
+                              : 'Unable to start checkout. Please try again.',
+                          variant: 'destructive',
+                        });
                       } finally {
                         setIsSubmitting(false);
                       }
