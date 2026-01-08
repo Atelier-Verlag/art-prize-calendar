@@ -452,23 +452,22 @@ export default function Admin() {
     
     alert(`Token found! User: ${sessionData.session.user.email}. Starting fetch...`);
     
-    // Step 2: Build the hardcoded URL
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
-    const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    // Step 2: Get URL DYNAMICALLY from the Supabase client instance
+    // Access internal property from the client
+    const clientAny = supabase as any;
+    const supabaseUrl = clientAny.supabaseUrl || clientAny.rest?.url?.replace('/rest/v1', '') || import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
     
-    // Use projectId to build URL if envUrl is missing
-    const baseUrl = (envUrl && envUrl.trim()) 
-      ? envUrl.replace(/\/$/, '') 
-      : (projectId ? `https://${projectId}.supabase.co` : null);
-    
-    if (!baseUrl) {
-      alert(`URL BUILD FAILED: envUrl=${envUrl}, projectId=${projectId}`);
+    if (!supabaseUrl) {
+      alert(`CRITICAL: Cannot determine Supabase URL from client!`);
       return;
     }
     
+    const baseUrl = supabaseUrl.replace(/\/$/, '');
     const functionUrl = `${baseUrl}/functions/v1/fetch-prizes`;
-    alert(`Pinging: ${functionUrl}`);
+    
+    // Show the user exactly where we're going
+    alert(`Dynamic Target URL:\n${functionUrl}\n\nBase from client: ${supabaseUrl}`);
     
     // Step 3: Make the request with window.fetch and mode: 'cors'
     try {
@@ -488,7 +487,7 @@ export default function Admin() {
       alert(`SUCCESS! Status: ${response.status} ${response.statusText}\n\nBody (first 500 chars):\n${text.substring(0, 500)}`);
     } catch (err) {
       const error = err as Error;
-      alert(`FETCH FAILED!\n\nName: ${error.name}\nMessage: ${error.message}\n\nThis is a client-side connectivity issue.`);
+      alert(`FETCH FAILED!\n\nName: ${error.name}\nMessage: ${error.message}\n\nURL was: ${functionUrl}\n\nThis is a client-side connectivity issue.`);
     }
   };
 
