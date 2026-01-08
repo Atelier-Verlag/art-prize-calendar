@@ -51,17 +51,35 @@ export default function Auth() {
   };
 
   const launchCheckout = async (checkoutPriceId: string): Promise<void> => {
+    console.log('[Checkout] Starting launchCheckout with priceId:', checkoutPriceId);
+    
     const session = await waitForSession();
-    if (!session) throw new Error('NO_SESSION');
+    if (!session) {
+      console.error('[Checkout] No session available after polling');
+      throw new Error('NO_SESSION');
+    }
+    
+    console.log('[Checkout] Session obtained, userId:', session.user.id);
+    console.log('[Checkout] Invoking create-checkout function...');
 
     const { data, error } = await supabase.functions.invoke('create-checkout', {
       headers: { Authorization: `Bearer ${session.access_token}` },
       body: { priceId: checkoutPriceId },
     });
 
-    if (error) throw error;
-    if (!data?.url) throw new Error('NO_CHECKOUT_URL');
+    console.log('[Checkout] Function response - data:', data, 'error:', error);
 
+    if (error) {
+      console.error('[Checkout] Function invoke error:', error);
+      throw error;
+    }
+    
+    if (!data?.url) {
+      console.error('[Checkout] No URL in response:', data);
+      throw new Error('NO_CHECKOUT_URL');
+    }
+
+    console.log('[Checkout] Opening Stripe URL:', data.url);
     window.open(data.url, '_blank', 'noopener,noreferrer');
   };
 
