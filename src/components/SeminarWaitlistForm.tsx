@@ -35,27 +35,16 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
     setIsSubmitting(true);
 
     try {
-      const waitlistId = crypto.randomUUID();
-
-      const { error } = await supabase
-        .from('seminar_waitlist')
-        .insert({ id: waitlistId, email: result.data, status: 'pending' });
-
-      if (error) {
-        throw error;
-      }
-
-      // Send confirmation email via Edge Function
-      const { error: emailError } = await supabase.functions.invoke('send-waitlist-confirmation', {
+      // Use edge function to insert (service role) since direct INSERT is now blocked by RLS
+      const { data, error } = await supabase.functions.invoke('send-waitlist-confirmation', {
         body: {
           email: result.data,
-          waitlistId,
         },
       });
 
-      if (emailError) {
-        console.error('Error sending confirmation email:', emailError);
-        // Don't throw - user is still on the waitlist, just email failed
+      if (error) {
+        console.error('Error adding to waitlist:', error);
+        throw error;
       }
 
       setIsSuccess(true);

@@ -849,7 +849,7 @@ export default function Admin() {
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
-                    onClick={() => window.open('/', '_blank', 'noopener,noreferrer')}
+                    onClick={() => navigate('/')}
                     className="flex-1 sm:flex-none"
                   >
                     <Globe className="h-4 w-4 mr-2" />

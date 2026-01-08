@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -10,7 +11,6 @@ const corsHeaders = {
 
 interface WaitlistConfirmationRequest {
   email: string;
-  waitlistId: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -20,7 +20,56 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, waitlistId }: WaitlistConfirmationRequest = await req.json();
+    const { email }: WaitlistConfirmationRequest = await req.json();
+
+    if (!email || typeof email !== 'string') {
+      return new Response(
+        JSON.stringify({ error: "Email is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    if (!emailRegex.test(email) || email.length > 320) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Create Supabase client with service role (bypasses RLS)
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const waitlistId = crypto.randomUUID();
+
+    console.log(`Inserting waitlist entry for: ${email}, id: ${waitlistId}`);
+
+    // Insert into seminar_waitlist using service role
+    const { error: insertError } = await supabaseClient
+      .from("seminar_waitlist")
+      .insert({
+        id: waitlistId,
+        email: email.trim().toLowerCase(),
+        status: "pending",
+        consented_at: new Date().toISOString(),
+      });
+
+    if (insertError) {
+      console.error("Error inserting waitlist entry:", insertError);
+      // Check for duplicate email
+      if (insertError.code === '23505') {
+        return new Response(
+          JSON.stringify({ error: "Diese E-Mail ist bereits auf der Warteliste." }),
+          { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      throw insertError;
+    }
 
     console.log(`Sending confirmation email to: ${email}, waitlistId: ${waitlistId}`);
 
