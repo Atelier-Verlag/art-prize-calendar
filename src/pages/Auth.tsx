@@ -52,14 +52,29 @@ export default function Auth() {
 
   const launchCheckout = async (checkoutPriceId: string): Promise<void> => {
     console.log('[Checkout] Starting launchCheckout with priceId:', checkoutPriceId);
-    
-    const session = await waitForSession();
-    if (!session) {
-      console.error('[Checkout] No session available after polling');
+
+    // Bypass React state: pull the freshest session directly from the auth client storage first.
+    const {
+      data: { session: directSession },
+      error: directSessionError,
+    } = await supabase.auth.getSession();
+
+    if (directSessionError) {
+      console.warn('[Checkout] getSession() returned an error:', directSessionError);
+    }
+
+    const directSessionReady = !!directSession?.access_token && !!directSession?.user?.id;
+
+    // If direct session is not ready yet (common right after signup), fall back to polling.
+    const session = directSessionReady ? directSession : await waitForSession();
+
+    if (!session?.access_token || !session.user?.id) {
+      console.error('[Checkout] No session available from getSession() or polling');
       throw new Error('NO_SESSION');
     }
-    
+
     console.log('[Checkout] Session obtained, userId:', session.user.id);
+    console.log('[Checkout] Using session source:', directSessionReady ? 'direct_getSession' : 'polled_waitForSession');
     console.log('[Checkout] Invoking create-checkout function...');
 
     const { data, error } = await supabase.functions.invoke('create-checkout', {
@@ -73,7 +88,7 @@ export default function Auth() {
       console.error('[Checkout] Function invoke error:', error);
       throw error;
     }
-    
+
     if (!data?.url) {
       console.error('[Checkout] No URL in response:', data);
       throw new Error('NO_CHECKOUT_URL');
