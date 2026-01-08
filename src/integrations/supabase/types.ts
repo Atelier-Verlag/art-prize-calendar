@@ -163,18 +163,24 @@ export type Database = {
       }
       seminar_waitlist: {
         Row: {
+          confirmed_at: string | null
+          consented_at: string
           created_at: string
           email: string
           id: string
           status: string
         }
         Insert: {
+          confirmed_at?: string | null
+          consented_at?: string
           created_at?: string
           email: string
           id?: string
           status?: string
         }
         Update: {
+          confirmed_at?: string | null
+          consented_at?: string
           created_at?: string
           email?: string
           id?: string
