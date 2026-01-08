@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('[Auth] Loading permissions for user:', userId);
 
     try {
-      // 1) Load profile for is_pro_user flag (NOT roles)
+      // 1) Load profile for is_pro_user flag
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_pro_user')
@@ -43,10 +43,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsProUser(profile?.is_pro_user ?? false);
       }
 
-      // EMERGENCY BYPASS: Always grant admin access for setup phase
-      // TODO: Remove this after setup is complete and restore proper admin check
-      console.log('[Auth] EMERGENCY MODE: Admin access granted for all logged-in users');
-      setIsAdmin(true);
+      // 2) Check admin role from user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('[Auth] Error checking admin role:', roleError);
+        setIsAdmin(false);
+      } else {
+        const hasAdminRole = !!roleData;
+        console.log('[Auth] Admin role check:', hasAdminRole);
+        setIsAdmin(hasAdminRole);
+      }
     } catch (err) {
       console.error('[Auth] Error loading permissions:', err);
       setIsProUser(false);

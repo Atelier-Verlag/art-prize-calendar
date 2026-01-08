@@ -148,8 +148,8 @@ export default function Admin() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [addingSource, setAddingSource] = useState(false);
   const [scanningSourceId, setScanningSourceId] = useState<string | null>(null);
-  // Allow ANY logged-in user to save content (RLS now permits authenticated users)
-  const canUseBackend = !!user;
+  // Only admins can use backend features
+  const canUseBackend = !!user && isAdmin;
 
 
   // Load existing content - always load for viewing, saving requires admin
@@ -653,8 +653,54 @@ export default function Admin() {
     );
   }
 
-  // SECURITY GATE REMOVED: Any authenticated user can now access Admin
-  // TODO: Re-enable admin check after proper roles setup
+  // SECURITY GATE: Only admins can access the Admin panel
+  if (!isAdmin) {
+    return (
+      <>
+        <Helmet>
+          <title>Zugriff verweigert | Kunstpreiskalender</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
+          <Card className="w-full max-w-md text-center">
+            <CardHeader>
+              <div className="flex justify-center mb-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
+                  <Shield className="h-6 w-6 text-destructive" />
+                </div>
+              </div>
+              <CardTitle className="font-display text-2xl">
+                {language === 'de' ? 'Zugriff verweigert' : 'Access Denied'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'de'
+                  ? 'Sie haben keine Berechtigung für den Admin-Bereich.'
+                  : 'You do not have permission to access the admin area.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {language === 'de'
+                  ? 'Eingeloggt als: '
+                  : 'Logged in as: '}
+                <span className="font-medium text-foreground">{user?.email}</span>
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={() => navigate('/')}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  {language === 'de' ? 'Zurück' : 'Back'}
+                </Button>
+                <Button variant="destructive" onClick={handleLogout} disabled={loggingOut}>
+                  {loggingOut ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
+                  {language === 'de' ? 'Abmelden' : 'Logout'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
 
   const contentSections: { key: ContentKey; title: string; description: string }[] = [
     { key: 'impressum', title: 'Impressum', description: 'Rechtliche Angaben gemäß § 5 TMG' },
