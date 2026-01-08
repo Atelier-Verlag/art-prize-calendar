@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useArtPrizes, type ArtPrize } from '@/hooks/useArtPrizes';
-import { CalendarCard } from './CalendarCard';
-import { PrizeDetailModal } from './PrizeDetailModal';
+import { useTenders, type Tender } from '@/hooks/useTenders';
+import { TenderCard } from './TenderCard';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
-import { getCategoryFilterColor, type Category } from '@/data/mockArtPrizes';
 import { addMonths, isBefore } from 'date-fns';
 
 // Static navigation filters in exact order
-const awardTypeFilters: { value: Category | 'all'; labelKey: string }[] = [
+const awardTypeFilters: { value: string; labelKey: string }[] = [
   { value: 'all', labelKey: 'filter.all' },
   { value: 'Kunstpreis', labelKey: 'filter.Kunstpreis' },
   { value: 'Wettbewerb', labelKey: 'filter.Wettbewerb' },
@@ -21,30 +19,40 @@ const awardTypeFilters: { value: Category | 'all'; labelKey: string }[] = [
   { value: 'Kunst am Bau', labelKey: 'filter.Kunst am Bau' },
 ];
 
+// Filter button color helper
+function getCategoryFilterColor(category: string, isActive: boolean): string {
+  if (!isActive) return '';
+  if (category === 'all') {
+    return 'bg-foreground text-background hover:bg-foreground/90';
+  }
+  return 'bg-[hsl(220,60%,45%)] text-white hover:bg-[hsl(220,60%,40%)]';
+}
+
 export function CalendarGrid() {
   const { t } = useLanguage();
   const { isProUser } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
-  const [selectedPrize, setSelectedPrize] = useState<ArtPrize | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedTender, setSelectedTender] = useState<Tender | null>(null);
 
-  const { data: prizes, isLoading } = useArtPrizes(false);
+  const { data: tenders, isLoading } = useTenders();
 
   // Filter: only show deadlines within next 6 months
   const sixMonthsFromNow = addMonths(new Date(), 6);
   
-  const filteredPrizes = (prizes || []).filter((prize) => {
+  const filteredTenders = (tenders || []).filter((tender) => {
     // Filter by deadline within 6 months
-    const deadlineDate = new Date(prize.deadline);
+    if (!tender.deadline) return false;
+    const deadlineDate = new Date(tender.deadline);
     if (!isBefore(deadlineDate, sixMonthsFromNow)) return false;
     
     // Filter by category
     if (selectedCategory === 'all') return true;
-    return prize.category === selectedCategory;
+    return tender.category === selectedCategory;
   });
 
   // Sort by deadline (soonest first)
-  const sortedPrizes = [...filteredPrizes].sort(
-    (a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+  const sortedTenders = [...filteredTenders].sort(
+    (a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime()
   );
 
   return (
@@ -89,16 +97,16 @@ export function CalendarGrid() {
         {/* Cards grid */}
         {!isLoading && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {sortedPrizes.map((prize, index) => (
+            {sortedTenders.map((tender, index) => (
               <div
-                key={prize.id}
+                key={tender.id}
                 className="animate-fade-in-up opacity-0"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <CalendarCard
-                  prize={prize}
+                <TenderCard
+                  tender={tender}
                   isProUser={isProUser}
-                  onClick={() => setSelectedPrize(prize)}
+                  onClick={() => setSelectedTender(tender)}
                 />
               </div>
             ))}
@@ -106,7 +114,7 @@ export function CalendarGrid() {
         )}
 
         {/* Empty state */}
-        {!isLoading && sortedPrizes.length === 0 && (
+        {!isLoading && sortedTenders.length === 0 && (
           <div className="text-center py-16">
             <p className="text-muted-foreground">
               Keine Ausschreibungen in dieser Kategorie gefunden.
@@ -114,14 +122,6 @@ export function CalendarGrid() {
           </div>
         )}
       </div>
-
-      {/* Detail modal */}
-      <PrizeDetailModal
-        prize={selectedPrize}
-        isOpen={!!selectedPrize}
-        onClose={() => setSelectedPrize(null)}
-        isProUser={isProUser}
-      />
     </section>
   );
 }
