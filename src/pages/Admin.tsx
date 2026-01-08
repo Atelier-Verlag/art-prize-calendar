@@ -316,28 +316,85 @@ export default function Admin() {
     setSaving(false);
   };
 
+  const buildFetchPrizesUrl = () => {
+    const base = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    if (!base) return null;
+    return `${base.replace(/\/$/, '')}/functions/v1/fetch-prizes`;
+  };
+
+  const invokeFetchPrizes = async (payload?: Record<string, unknown>) => {
+    const functionUrl = buildFetchPrizesUrl();
+    console.log('[Admin] Invoking function at:', functionUrl);
+
+    // 1) Preferred: invoke via client SDK
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-prizes', {
+        body: payload,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (error) throw error;
+      return { data, via: 'invoke' as const };
+    } catch (err) {
+      console.warn('[Admin] supabase.functions.invoke failed, trying direct fetch fallback:', err);
+
+      // 2) Fallback: direct fetch (full URL) for debugging connectivity
+      if (!functionUrl) throw err;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+      const authHeader = token ?? anonKey;
+
+      const res = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          ...(authHeader ? { Authorization: `Bearer ${authHeader}` } : {}),
+          ...(anonKey ? { apikey: anonKey } : {}),
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload ?? {}),
+      });
+
+      const text = await res.text();
+      let json: any = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        // keep raw text
+      }
+
+      if (!res.ok) {
+        const e: any = new Error(`HTTP ${res.status} ${res.statusText}`);
+        e.status = res.status;
+        e.context = { body: json ?? text };
+        throw e;
+      }
+
+      return { data: json, via: 'fetch' as const };
+    }
+  };
+
   const handleStartScraper = async () => {
     setScraperRunning(true);
     setScanningSourceName(null); // Full scan, no specific source
-    
+
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-prizes');
-      
-      if (error) {
-        throw error;
-      }
-      
-      const stats = data?.stats || {};
-      const message = data?.partial 
+      const { data, via } = await invokeFetchPrizes();
+
+      const stats = (data as any)?.stats || {};
+      const message = (data as any)?.partial
         ? `Teilscan abgeschlossen (Timeout): ${stats.saved || 0} neu, ${stats.archived || 0} archiviert.`
-        : data?.message || 'Der Kunstpreis-Roboter wurde erfolgreich abgeschlossen.';
-      
+        : (data as any)?.message || 'Der Kunstpreis-Roboter wurde erfolgreich abgeschlossen.';
+
       toast({
-        title: data?.partial ? 'Roboter (Teilscan)' : 'Roboter abgeschlossen',
+        title: (data as any)?.partial ? `Roboter (Teilscan) [${via}]` : `Roboter abgeschlossen [${via}]`,
         description: message,
       });
-      
-      // Logs neu laden
+
       await loadScraperLogs();
     } catch (error) {
       console.error('Error starting scraper:', error);
@@ -347,7 +404,9 @@ export default function Admin() {
         errAny?.status ? `status=${errAny.status}` : null,
         errAny?.message,
         errAny?.context ? JSON.stringify(errAny.context) : null,
-      ].filter(Boolean).join(' | ');
+      ]
+        .filter(Boolean)
+        .join(' | ');
 
       toast({
         title: 'Fehler beim Starten (technisch)',
@@ -362,27 +421,20 @@ export default function Admin() {
   const handleScanSource = async (source: ScraperSource) => {
     setScanningSourceId(source.id);
     setScanningSourceName(source.name);
-    
+
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-prizes', {
-        body: { singleUrl: source.url, sourceName: source.name }
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      const stats = data?.stats || {};
-      const message = data?.partial 
+      const { data, via } = await invokeFetchPrizes({ singleUrl: source.url, sourceName: source.name });
+
+      const stats = (data as any)?.stats || {};
+      const message = (data as any)?.partial
         ? `Teilscan abgeschlossen (Timeout). ${stats.saved || 0} neue Einträge.`
         : `"${source.name}" wurde gescannt. ${stats.saved || 0} neue Einträge gefunden.`;
-      
+
       toast({
-        title: data?.partial ? 'Teilscan abgeschlossen' : 'Scan abgeschlossen',
+        title: (data as any)?.partial ? `Teilscan abgeschlossen [${via}]` : `Scan abgeschlossen [${via}]`,
         description: message,
       });
-      
-      // Logs neu laden
+
       await loadScraperLogs();
     } catch (error) {
       console.error('Error scanning source:', error);
@@ -392,7 +444,9 @@ export default function Admin() {
         errAny?.status ? `status=${errAny.status}` : null,
         errAny?.message,
         errAny?.context ? JSON.stringify(errAny.context) : null,
-      ].filter(Boolean).join(' | ');
+      ]
+        .filter(Boolean)
+        .join(' | ');
 
       toast({
         title: 'Fehler beim Scan (technisch)',
