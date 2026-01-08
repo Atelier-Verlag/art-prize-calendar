@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut, Calendar } from 'lucide-react';
+import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut } from 'lucide-react';
 import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
 import { SeminarWaitlistManager } from '@/components/admin/SeminarWaitlistManager';
 import { format } from 'date-fns';

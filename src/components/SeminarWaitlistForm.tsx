@@ -58,11 +58,6 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
         // Don't throw - user is still on the waitlist, just email failed
       }
 
-      if (emailError) {
-        console.error('Error sending confirmation email:', emailError);
-        // Don't throw - user is still on the waitlist, just email failed
-      }
-
       setIsSuccess(true);
       toast({
         title: 'Fast geschafft!',
@@ -102,7 +97,7 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
       <p className="text-sm text-muted-foreground">
         Setz dich unverbindlich auf die Warteliste für unsere kommenden Seminare.
       </p>
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="flex gap-2">
         <Input
           type="email"
           placeholder="E-Mail-Adresse"

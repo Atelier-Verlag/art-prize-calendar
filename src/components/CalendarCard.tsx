@@ -160,11 +160,8 @@ export function CalendarCard({ prize, onClick, isProUser, trustStatus = 'verifie
                 </a>
               </p>
               
-              {/* Seminar Waitlist Section */}
               <Separator className="my-4" />
-              <div onClick={(e) => e.stopPropagation()}>
-                <SeminarWaitlistForm />
-              </div>
+              <SeminarWaitlistForm />
             </div>
           </HoverCardContent>
         </HoverCard>
