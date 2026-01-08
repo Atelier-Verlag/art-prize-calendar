@@ -13,7 +13,7 @@ export function FloatingAdminButton() {
   return (
     <Button
       onClick={() => navigate('/admin')}
-      className="fixed bottom-6 right-6 z-[100] bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg rounded-full h-14 px-6 font-bold text-base"
+      className="fixed bottom-6 right-6 z-50 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg rounded-full h-14 px-6 font-bold text-base"
     >
       <Shield className="h-5 w-5 mr-2" />
       Go to Admin

@@ -13,16 +13,17 @@ const AI_BATCH_TIMEOUT_MS = 12000; // 12 seconds per AI batch
 const MAX_CONTENT_CHARS = 4000; // Limit content to 4000 chars
 const BATCH_SIZE = 3; // Smaller batches for faster processing
 
-const startTime = Date.now();
+// Request-scoped timing (will be set per request)
+let requestStartTime = Date.now();
 
 const logStep = (step: string, details?: unknown) => {
-  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[FETCH-PRIZES][${elapsed}s] ${step}${detailsStr}`);
 };
 
 const isTimeoutApproaching = () => {
-  return (Date.now() - startTime) > HARD_TIMEOUT_MS;
+  return (Date.now() - requestStartTime) > HARD_TIMEOUT_MS;
 };
 
 // Erweiterte internationale Suchbegriffe für Open Calls 2026 (nur 2026!)
@@ -282,6 +283,9 @@ function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
 }
 
 serve(async (req) => {
+  // Reset request timing for each new request
+  requestStartTime = Date.now();
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -510,7 +514,7 @@ serve(async (req) => {
       }
     }
 
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
     const wasTimeout = isTimeoutApproaching();
     const statusEmoji = wasTimeout ? "⚠️" : "✅";
     const successMessage = `${statusEmoji} Roboter beendet (${elapsed}s): ${uniqueResults.length} Seiten, ${extractedPrizes.length} gefunden, ${newPrizesCount} neu${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}, ${archivedCount} archiviert${wasTimeout ? ' [TIMEOUT - Teilergebnis]' : ''}`;
@@ -545,7 +549,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep(`❌ FEHLER nach ${elapsed}s`, { message: errorMessage });
 
