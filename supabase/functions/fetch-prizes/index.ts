@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // PERFORMANCE CONSTANTS
@@ -283,9 +284,12 @@ function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
 }
 
 serve(async (req) => {
+  console.log(`[ROBOT] Invoked`, { method: req.method, url: req.url });
+
   // Reset request timing for each new request
   requestStartTime = Date.now();
   
+  // Global CORS preflight handler
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -295,6 +299,7 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } }
   );
+
 
   const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");

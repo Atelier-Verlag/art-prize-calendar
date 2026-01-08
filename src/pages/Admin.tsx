@@ -341,9 +341,17 @@ export default function Admin() {
       await loadScraperLogs();
     } catch (error) {
       console.error('Error starting scraper:', error);
+      const errAny = error as any;
+      const technical = [
+        errAny?.name,
+        errAny?.status ? `status=${errAny.status}` : null,
+        errAny?.message,
+        errAny?.context ? JSON.stringify(errAny.context) : null,
+      ].filter(Boolean).join(' | ');
+
       toast({
-        title: 'Fehler',
-        description: 'Der Roboter konnte nicht gestartet werden.',
+        title: 'Fehler beim Starten (technisch)',
+        description: technical || 'Unbekannter Fehler',
         variant: 'destructive',
       });
     } finally {
@@ -378,9 +386,17 @@ export default function Admin() {
       await loadScraperLogs();
     } catch (error) {
       console.error('Error scanning source:', error);
+      const errAny = error as any;
+      const technical = [
+        errAny?.name,
+        errAny?.status ? `status=${errAny.status}` : null,
+        errAny?.message,
+        errAny?.context ? JSON.stringify(errAny.context) : null,
+      ].filter(Boolean).join(' | ');
+
       toast({
-        title: 'Fehler',
-        description: `"${source.name}" konnte nicht gescannt werden.`,
+        title: 'Fehler beim Scan (technisch)',
+        description: technical || `"${source.name}" konnte nicht gescannt werden.`,
         variant: 'destructive',
       });
     } finally {
