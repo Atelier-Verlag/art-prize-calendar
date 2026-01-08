@@ -304,55 +304,60 @@ serve(async (req) => {
 
   requestStartTime = Date.now();
   
+  // Handle CORS preflight - must return 204 with all CORS headers
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-  // Log environment (redacted) so we can confirm we're hitting the correct production backend.
-  try {
-    const u = new URL(supabaseUrl);
-    logStep("Backend env", {
-      host: u.host,
-      hasServiceRoleKey: !!serviceRoleKey,
-      serviceRoleKeyPrefix: serviceRoleKey ? serviceRoleKey.slice(0, 8) : null,
-    });
-  } catch {
-    logStep("Backend env (invalid SUPABASE_URL)", {
-      supabaseUrlPresent: !!supabaseUrl,
-      hasServiceRoleKey: !!serviceRoleKey,
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
     });
   }
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Missing backend env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)");
-  }
-
-  const supabaseClient = createClient(
-    supabaseUrl,
-    serviceRoleKey,
-    { auth: { persistSession: false } }
-  );
-
-  const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
-  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-
-  let singleUrl: string | null = null;
-  let sourceName: string | null = null;
+  // Wrap EVERYTHING in try/catch so errors always include CORS headers
   try {
-    const body = await req.json();
-    singleUrl = body?.singleUrl || null;
-    sourceName = body?.sourceName || null;
-  } catch {
-    // No body or invalid JSON - run full scan
-  }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-  const isSingleUrlMode = !!singleUrl;
-  let runningLogId: string | null = null;
+    // Log environment (redacted) so we can confirm we're hitting the correct production backend.
+    try {
+      const u = new URL(supabaseUrl);
+      logStep("Backend env", {
+        host: u.host,
+        hasServiceRoleKey: !!serviceRoleKey,
+        serviceRoleKeyPrefix: serviceRoleKey ? serviceRoleKey.slice(0, 8) : null,
+      });
+    } catch {
+      logStep("Backend env (invalid SUPABASE_URL)", {
+        supabaseUrlPresent: !!supabaseUrl,
+        hasServiceRoleKey: !!serviceRoleKey,
+      });
+    }
 
-  try {
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Missing backend env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)");
+    }
+
+    const supabaseClient = createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      { auth: { persistSession: false } }
+    );
+
+    const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+
+    let singleUrl: string | null = null;
+    let sourceName: string | null = null;
+    try {
+      const body = await req.json();
+      singleUrl = body?.singleUrl || null;
+      sourceName = body?.sourceName || null;
+    } catch {
+      // No body or invalid JSON - run full scan
+    }
+
+    const isSingleUrlMode = !!singleUrl;
+    let runningLogId: string | null = null;
+
     const modeLabel = isSingleUrlMode ? `Einzelscan: ${sourceName || singleUrl}` : "Vollständige internationale Suche";
     logStep(`🤖 Roboter gestartet - ${modeLabel}`);
 
@@ -707,16 +712,8 @@ serve(async (req) => {
       stack: errorStack?.substring(0, 500) 
     });
 
-    if (runningLogId) {
-      await supabaseClient
-        .from("scraper_logs")
-        .update({
-          status: "error",
-          message: `❌ Fehler nach ${elapsed}s: ${errorMessage}`,
-          items_found: 0,
-        })
-        .eq("id", runningLogId);
-    }
+    // Note: supabaseClient and runningLogId may not be defined if error happened early
+    // so we skip the DB log update in catch block
 
     return new Response(
       JSON.stringify({ 
