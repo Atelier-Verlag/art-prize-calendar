@@ -308,9 +308,31 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+  // Log environment (redacted) so we can confirm we're hitting the correct production backend.
+  try {
+    const u = new URL(supabaseUrl);
+    logStep("Backend env", {
+      host: u.host,
+      hasServiceRoleKey: !!serviceRoleKey,
+      serviceRoleKeyPrefix: serviceRoleKey ? serviceRoleKey.slice(0, 8) : null,
+    });
+  } catch {
+    logStep("Backend env (invalid SUPABASE_URL)", {
+      supabaseUrlPresent: !!supabaseUrl,
+      hasServiceRoleKey: !!serviceRoleKey,
+    });
+  }
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Missing backend env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)");
+  }
+
   const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    supabaseUrl,
+    serviceRoleKey,
     { auth: { persistSession: false } }
   );
 
@@ -572,6 +594,8 @@ serve(async (req) => {
 
       logStep(`Prepared`, { new: newPrizes.length, updates: updateOperations.length, skipped: skippedCount });
 
+      const writeErrors: Array<{ stage: string; error: unknown }> = [];
+
       // BATCH INSERT new art_prizes (much faster than one-by-one)
       if (newPrizes.length > 0) {
         const { data: insertedData, error: batchInsertError } = await supabaseClient
@@ -580,7 +604,10 @@ serve(async (req) => {
           .select("id");
 
         if (batchInsertError) {
-          logStep("Batch Insert Fehler", { error: batchInsertError.message, code: batchInsertError.code });
+          // CRITICAL: log full error object (not just message)
+          logStep("Batch Insert Fehler (full)", { error: batchInsertError });
+          writeErrors.push({ stage: 'insert_batch', error: batchInsertError });
+
           // Fallback: try individual inserts
           for (const prizeData of newPrizes) {
             const { error: singleError } = await supabaseClient.from("art_prizes").insert(prizeData);
@@ -589,7 +616,8 @@ serve(async (req) => {
             } else if (singleError.message.includes('duplicate') || singleError.code === '23505') {
               skippedCount++;
             } else {
-              logStep("Single Insert Fehler", { error: singleError.message, name: prizeData.name });
+              logStep("Single Insert Fehler (full)", { error: singleError, name: prizeData.name });
+              writeErrors.push({ stage: 'insert_single', error: singleError });
             }
           }
         } else {
@@ -604,12 +632,31 @@ serve(async (req) => {
           .from("art_prizes")
           .update(op.data)
           .eq("id", op.id);
-        
+
         if (!updateError) {
           updatedCount++;
         } else {
-          logStep("Update Fehler", { error: updateError.message, id: op.id });
+          // CRITICAL: log full error object (not just message)
+          logStep("Update Fehler (full)", { error: updateError, id: op.id });
+          writeErrors.push({ stage: 'update', error: updateError });
         }
+      }
+
+      // Sanity-check: confirm the table is actually readable from this backend connection
+      const { count: rowCount, error: countError } = await supabaseClient
+        .from('art_prizes')
+        .select('id', { count: 'exact', head: true });
+
+      if (countError) {
+        logStep('Sanity count Fehler (full)', { error: countError });
+        writeErrors.push({ stage: 'sanity_count', error: countError });
+      } else {
+        logStep('Sanity count OK', { rows: rowCount });
+      }
+
+      if (writeErrors.length > 0) {
+        // Make the function fail loudly so the frontend never shows a false success.
+        throw new Error(`DB_WRITE_FAILED: ${JSON.stringify(writeErrors).substring(0, 2000)}`);
       }
 
       logStep(`Speicherung abgeschlossen`, { new: newPrizesCount, updated: updatedCount, skipped: skippedCount });

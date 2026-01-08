@@ -317,68 +317,21 @@ export default function Admin() {
   };
 
   const invokeFetchPrizes = async (payload?: Record<string, unknown>) => {
-    const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
-    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    // Prefer the official client invocation to avoid CORS/network issues and to
+    // guarantee we target the currently-configured backend project.
+    const { data, error } = await supabase.functions.invoke('fetch-prizes', {
+      body: payload ?? {},
+    });
 
-    // "Hardcoded" absolute URL fix: derive the backend URL from the project id if env URL is missing.
-    const derivedUrl = projectId ? `https://${projectId}.supabase.co` : undefined;
-    const baseUrl = (envUrl && envUrl.trim()) ? envUrl : derivedUrl;
-
-    if (!baseUrl) {
-      const e: Error & { context?: unknown } = new Error('Missing backend URL (VITE_SUPABASE_URL / VITE_SUPABASE_PROJECT_ID)');
-      e.context = { envUrl, projectId };
+    if (error) {
+      // Surface the full object for debugging (status/message/context)
+      console.error('[Admin] fetch-prizes invoke error:', error);
+      const e: Error & { context?: unknown } = new Error(error.message);
+      e.context = error;
       throw e;
     }
 
-    if (!anonKey) {
-      const e: Error & { context?: unknown } = new Error('Missing publishable key (VITE_SUPABASE_PUBLISHABLE_KEY)');
-      e.context = { hasUrl: !!baseUrl };
-      throw e;
-    }
-
-    const functionUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/fetch-prizes`;
-    console.log('[Admin] Calling fetch-prizes via direct fetch:', functionUrl);
-
-    // Get user token for authenticated request
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-
-    let res: Response;
-    try {
-      res = await fetch(functionUrl, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: `Bearer ${token ?? anonKey}`,
-          apikey: anonKey,
-        },
-        body: JSON.stringify(payload ?? {}),
-      });
-    } catch (err) {
-      const e: Error & { context?: unknown } = new Error(err instanceof Error ? err.message : String(err));
-      e.context = { functionUrl };
-      throw e;
-    }
-
-    const text = await res.text();
-    let json: unknown = null;
-    try {
-      json = text ? JSON.parse(text) : null;
-    } catch {
-      // keep raw text
-    }
-
-    if (!res.ok) {
-      const e: Error & { status?: number; context?: unknown } = new Error(`HTTP ${res.status} ${res.statusText}`);
-      e.status = res.status;
-      e.context = { functionUrl, body: json ?? text };
-      throw e;
-    }
-
-    return { data: json, via: 'fetch' as const };
+    return { data, via: 'invoke' as const };
   };
 
   const handleStartScraper = async () => {
