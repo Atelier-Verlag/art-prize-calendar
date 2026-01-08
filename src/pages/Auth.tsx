@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 type AuthView = 'login' | 'signup' | 'forgot-password';
 
 export default function Auth() {
-  const { user, signIn, signUp, signOut, loading, startCheckout } = useAuth();
+  const { user, signIn, signUp, signOut, loading } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -34,20 +34,62 @@ export default function Auth() {
   const returnTo = searchParams.get('returnTo') || '/';
   const isCheckoutFlow = !!priceId;
 
+  const launchCheckout = async (checkoutPriceId: string) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      throw new Error('NO_SESSION');
+    }
+
+    const { data, error } = await supabase.functions.invoke('create-checkout', {
+      body: { priceId: checkoutPriceId },
+    });
+
+    if (error) throw error;
+    if (!data?.url) throw new Error('NO_CHECKOUT_URL');
+
+    window.open(data.url, '_blank', 'noopener,noreferrer');
+  };
+
   // Handle post-auth checkout redirect
   useEffect(() => {
     const handlePostAuthCheckout = async () => {
       if (user && !loading && priceId && !isProcessingCheckout) {
         setIsProcessingCheckout(true);
-        setIsSubmitting(false); // Clear submitting state
-        // User just logged in/signed up and has a pending checkout
-        await startCheckout(priceId);
-        navigate(returnTo);
+        setIsSubmitting(false);
+
+        try {
+          await launchCheckout(priceId);
+          navigate(returnTo);
+        } catch (err: any) {
+          if (err?.message === 'NO_SESSION') {
+            toast({
+              title: language === 'de' ? 'Bitte anmelden' : 'Please log in',
+              description:
+                language === 'de'
+                  ? 'Bitte melden Sie sich an, um zur Zahlung weiterzugehen.'
+                  : 'Please sign in to proceed to payment.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: language === 'de' ? 'Fehler' : 'Error',
+              description:
+                language === 'de'
+                  ? 'Checkout konnte nicht gestartet werden.'
+                  : 'Unable to start checkout.',
+              variant: 'destructive',
+            });
+          }
+          setIsProcessingCheckout(false);
+        }
       }
     };
 
     handlePostAuthCheckout();
-  }, [user, loading, priceId, returnTo, navigate, startCheckout, isProcessingCheckout]);
+  }, [user, loading, priceId, returnTo, navigate, isProcessingCheckout, toast, language]);
 
   // Fallback timeout: if checkout is processing for > 3 seconds, show manual button
   useEffect(() => {
@@ -115,14 +157,36 @@ export default function Auth() {
       }
       setIsSubmitting(false);
     } else {
-      setSignupComplete(true); // Mark signup as complete for timeout fallback
+      setSignupComplete(true);
+
+      // If auto-login isn't immediate for any reason, push user to login first.
+      // We keep priceId in the URL, so the checkout auto-starts right after login.
+      if (isCheckoutFlow) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          toast({
+            title: language === 'de' ? 'Bitte anmelden' : 'Please log in',
+            description:
+              language === 'de'
+                ? 'Bitte melden Sie sich jetzt an – danach geht es automatisch zur Zahlung weiter.'
+                : 'Please sign in now—then we will automatically continue to payment.',
+          });
+          setView('login');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       toast({
         title: language === 'de' ? 'Erfolgreich registriert!' : 'Successfully registered!',
-        description: isCheckoutFlow 
+        description: isCheckoutFlow
           ? (language === 'de' ? 'Weiterleitung zur Zahlung...' : 'Redirecting to checkout...')
           : (language === 'de' ? 'Willkommen!' : 'Welcome!'),
       });
-      // Keep isSubmitting true - useEffect will clear it when checkout starts or timeout fires
+      // Keep isSubmitting true - checkout effect or timeout fallback will resolve the UI.
     }
   };
 
@@ -460,31 +524,37 @@ export default function Auth() {
                     className="w-full gradient-gold text-primary font-semibold border-0"
                     disabled={isSubmitting}
                     onClick={async () => {
-                      // Check if session is established after signup
-                      if (user) {
-                        setIsSubmitting(true);
-                        await startCheckout(priceId!);
+                      setIsSubmitting(true);
+                      try {
+                        await launchCheckout(priceId!);
                         navigate(returnTo);
-                      } else {
-                        // Session not ready yet - user needs to log in
-                        toast({
-                          title: language === 'de' ? 'Bitte anmelden' : 'Please log in',
-                          description: language === 'de' 
-                            ? 'Melden Sie sich mit Ihren Zugangsdaten an, um fortzufahren.'
-                            : 'Log in with your credentials to continue.',
-                        });
-                        setView('login');
-                        setSignupComplete(false);
-                        setCheckoutTimeout(false);
+                      } catch (err: any) {
+                        if (err?.message === 'NO_SESSION') {
+                          toast({
+                            title: language === 'de' ? 'Bitte anmelden' : 'Please log in',
+                            description:
+                              language === 'de'
+                                ? 'Bitte melden Sie sich jetzt an – danach geht es automatisch zur Zahlung weiter.'
+                                : 'Please sign in now—then we will automatically continue to payment.',
+                          });
+                          setView('login');
+                        } else {
+                          toast({
+                            title: language === 'de' ? 'Fehler' : 'Error',
+                            description:
+                              language === 'de'
+                                ? 'Checkout konnte nicht gestartet werden.'
+                                : 'Unable to start checkout.',
+                            variant: 'destructive',
+                          });
+                        }
+                      } finally {
+                        setIsSubmitting(false);
                       }
                     }}
                   >
-                    {isSubmitting ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    {user 
-                      ? (language === 'de' ? 'Weiter zur Zahlung' : 'Proceed to Payment')
-                      : (language === 'de' ? 'Anmelden & fortfahren' : 'Log in & continue')}
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    {language === 'de' ? 'Weiter zur Zahlung' : 'Proceed to Payment'}
                   </Button>
                 ) : (
                   <Button
@@ -495,7 +565,7 @@ export default function Auth() {
                     {isSubmitting ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : null}
-                    {signupComplete 
+                    {signupComplete
                       ? (language === 'de' ? 'Weiterleitung...' : 'Redirecting...')
                       : t('auth.signup')}
                   </Button>
