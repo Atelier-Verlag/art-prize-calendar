@@ -68,9 +68,10 @@ export default function Auth() {
     // If direct session is not ready yet (common right after signup), fall back to polling.
     const session = directSessionReady ? directSession : await waitForSession();
 
-    if (!session?.access_token || !session.user?.id) {
-      console.error('[Checkout] No session available from getSession() or polling');
-      throw new Error('NO_SESSION');
+    // Strict guard: never invoke backend checkout without a logged-in user/session.
+    if (!session || !session.user || !session.access_token) {
+      console.error('[Checkout] Guard blocked checkout invocation (no active session/user)');
+      throw new Error('No active session');
     }
 
     console.log('[Checkout] Session obtained, userId:', session.user.id);
@@ -184,32 +185,50 @@ export default function Auth() {
     const { error } = await signUp(email, password);
 
     if (error) {
-      if (error.message.includes('already registered')) {
+      const isRateLimit =
+        /rate limit|too many requests|security purposes/i.test(error.message ?? '');
+
+      if (isRateLimit) {
+        toast({
+          title: language === 'de' ? 'Zu viele Versuche' : 'Too many attempts',
+          description:
+            language === 'de'
+              ? 'Zu viele Versuche. Bitte versuchen Sie es später erneut.'
+              : 'Too many attempts. Please try again later.',
+          variant: 'destructive',
+        });
+      } else if (error.message.includes('already registered')) {
         toast({
           title: t('auth.error.exists'),
           variant: 'destructive',
         });
       } else {
         toast({
-          title: 'Fehler',
+          title: language === 'de' ? 'Fehler' : 'Error',
           description: error.message,
           variant: 'destructive',
         });
       }
+
       setIsSubmitting(false);
-    } else {
-      setSignupComplete(true);
-      
-      // With auto-confirm enabled, Supabase auto-logs in the user.
-      // The useEffect watching `user` will trigger checkout once session propagates.
-      toast({
-        title: language === 'de' ? 'Erfolgreich registriert!' : 'Successfully registered!',
-        description: isCheckoutFlow
-          ? (language === 'de' ? 'Weiterleitung zur Zahlung...' : 'Redirecting to checkout...')
-          : (language === 'de' ? 'Willkommen!' : 'Welcome!'),
-      });
-      // Keep isSubmitting true - the checkout useEffect will handle the rest
+      return; // IMPORTANT: stop flow on signup failure
     }
+
+    setSignupComplete(true);
+
+    // With auto-confirm enabled, Supabase auto-logs in the user.
+    // The useEffect watching `user` will trigger checkout once session propagates.
+    toast({
+      title: language === 'de' ? 'Erfolgreich registriert!' : 'Successfully registered!',
+      description: isCheckoutFlow
+        ? language === 'de'
+          ? 'Weiterleitung zur Zahlung...'
+          : 'Redirecting to checkout...'
+        : language === 'de'
+          ? 'Willkommen!'
+          : 'Welcome!',
+    });
+    // Keep isSubmitting true - the checkout useEffect will handle the rest
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
