@@ -20,9 +20,50 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Confirming waitlist entry: ${waitlistId}`);
 
-    if (!waitlistId) {
+    // Validate both id and token are present
+    if (!waitlistId || !token) {
       return new Response(
         generateHtmlPage("Fehler", "Ungültiger Bestätigungslink.", false),
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders },
+        }
+      );
+    }
+
+    // Decode and validate token
+    let decodedToken: string;
+    try {
+      decodedToken = atob(token);
+    } catch {
+      return new Response(
+        generateHtmlPage("Fehler", "Ungültiger Token.", false),
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders },
+        }
+      );
+    }
+
+    const [tokenWaitlistId, tokenTimestamp] = decodedToken.split(':');
+    
+    // Validate token matches waitlist ID
+    if (tokenWaitlistId !== waitlistId) {
+      return new Response(
+        generateHtmlPage("Fehler", "Ungültiger Bestätigungslink.", false),
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders },
+        }
+      );
+    }
+
+    // Check token age (expire after 7 days)
+    const tokenAge = Date.now() - parseInt(tokenTimestamp);
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+    if (isNaN(tokenAge) || tokenAge > maxAge) {
+      return new Response(
+        generateHtmlPage("Fehler", "Bestätigungslink abgelaufen. Bitte erneut anmelden.", false),
         {
           status: 400,
           headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders },
