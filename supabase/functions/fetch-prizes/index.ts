@@ -355,45 +355,42 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY fehlt - bitte in Secrets konfigurieren");
     }
 
-    // 1. ARCHIVIERUNG - Delete expired tenders
-    logStep("Lösche abgelaufene Tenders");
+    // 1. ARCHIVIERUNG - Archive expired art_prizes
+    logStep("Archiviere abgelaufene Einträge");
     const today = new Date().toISOString().split('T')[0];
     
-    const { data: expiredTenders } = await supabaseClient
-      .from("tenders")
-      .select("id")
-      .lt("deadline", today);
+    const { data: expiredPrizes, error: expiredError } = await supabaseClient
+      .from("art_prizes")
+      .update({ is_archived: true })
+      .lt("deadline", today)
+      .eq("is_archived", false)
+      .select("id");
 
     let archivedCount = 0;
-    if (expiredTenders && expiredTenders.length > 0) {
-      const expiredIds = expiredTenders.map(p => p.id);
-      await supabaseClient
-        .from("tenders")
-        .delete()
-        .in("id", expiredIds);
-      archivedCount = expiredTenders.length;
-      logStep(`${archivedCount} abgelaufene Tenders gelöscht`);
+    if (expiredPrizes && expiredPrizes.length > 0) {
+      archivedCount = expiredPrizes.length;
+      logStep(`${archivedCount} abgelaufene Einträge archiviert`);
     }
 
-    // 2. FETCH EXISTING TENDERS for duplicate detection
-    const { data: existingTenders } = await supabaseClient
-      .from("tenders")
-      .select("id, title, application_link, deadline");
+    // 2. FETCH EXISTING ART_PRIZES for duplicate detection
+    const { data: existingPrizes } = await supabaseClient
+      .from("art_prizes")
+      .select("id, name, website, deadline");
     
     const existingByUrl = new Map<string, string>();
     const existingByTitleDeadline = new Map<string, string>();
     
-    if (existingTenders) {
-      for (const t of existingTenders) {
-        if (t.application_link) {
-          existingByUrl.set(t.application_link, t.id);
+    if (existingPrizes) {
+      for (const p of existingPrizes) {
+        if (p.website) {
+          existingByUrl.set(p.website, p.id);
         }
-        const key = `${normalizeTitle(t.title)}_${t.deadline}`;
-        existingByTitleDeadline.set(key, t.id);
+        const key = `${normalizeTitle(p.name)}_${p.deadline}`;
+        existingByTitleDeadline.set(key, p.id);
       }
     }
     
-    logStep(`Existierende Tenders geladen`, { count: existingTenders?.length || 0 });
+    logStep(`Existierende Einträge geladen`, { count: existingPrizes?.length || 0 });
 
     // 3. SUCHE - Process ALL search queries
     let allSearchResults: TavilyResult[] = [];
@@ -463,31 +460,35 @@ serve(async (req) => {
       const validPrizes = extractedPrizes.filter(prize => prize.deadline >= today);
       logStep(`${validPrizes.length} gültige Preise nach Deadline-Filter`);
 
-      // 5. SAVE TO TENDERS TABLE - BATCH INSERT (no timeout check - saving is critical!)
-      logStep(`Starte Speicherung`, { count: validPrizes.length });
+      // 5. SAVE TO ART_PRIZES TABLE - BATCH INSERT (no timeout check - saving is critical!)
+      logStep(`Starte Speicherung in art_prizes`, { count: validPrizes.length });
 
-      // Prepare all tender records
-      type TenderData = {
-        title: string;
+      // Prepare all art_prize records matching the art_prizes table schema
+      type ArtPrizeData = {
+        name: string;
         deadline: string;
-        application_link: string;
+        website: string;
         description: string;
         organizer: string;
-        location: string;
+        region: string;
+        country: string;
         category: string;
-        entry_fee: number;
-        artist_fee: boolean;
-        age_limit: string | null;
-        prize_detail: string | null;
-        geo_scope: string;
+        fee: number | null;
+        prize_amount: number | null;
+        eligibility_restriction: string | null;
+        age_min: number | null;
+        age_max: number | null;
+        currency: string;
+        requirements: string[];
+        is_archived: boolean;
+        is_short_term: boolean;
       };
 
-      const newTenders: TenderData[] = [];
-      const updateOperations: { id: string; data: TenderData }[] = [];
-
+      const newPrizes: ArtPrizeData[] = [];
+      const updateOperations: { id: string; data: Partial<ArtPrizeData> }[] = [];
 
       for (const prize of validPrizes) {
-        // Map category
+        // Map category to valid art_category enum
         let safeCategory = prize.category;
         const categoryMap: Record<string, string> = {
           "grant": "Stipendium",
@@ -509,6 +510,23 @@ serve(async (req) => {
           safeCategory = "Wettbewerb";
         }
 
+        // Parse age_limit into age_min/age_max
+        let ageMin: number | null = null;
+        let ageMax: number | null = null;
+        if (prize.age_limit) {
+          const ageMatch = prize.age_limit.match(/(\d+)/g);
+          if (ageMatch) {
+            if (prize.age_limit.toLowerCase().includes('unter') || prize.age_limit.toLowerCase().includes('bis')) {
+              ageMax = parseInt(ageMatch[0]);
+            } else if (prize.age_limit.toLowerCase().includes('über') || prize.age_limit.toLowerCase().includes('ab')) {
+              ageMin = parseInt(ageMatch[0]);
+            } else if (ageMatch.length >= 2) {
+              ageMin = parseInt(ageMatch[0]);
+              ageMax = parseInt(ageMatch[1]);
+            }
+          }
+        }
+
         // Check for existing by URL first
         let existingId = existingByUrl.get(prize.website);
         
@@ -518,55 +536,64 @@ serve(async (req) => {
           existingId = existingByTitleDeadline.get(titleDeadlineKey);
         }
 
-        const tenderData: TenderData = {
-          title: prize.name,
+        const artPrizeData: ArtPrizeData = {
+          name: prize.name,
           deadline: prize.deadline,
-          application_link: prize.website,
+          website: prize.website,
           description: prize.description,
           organizer: prize.organizer,
-          location: prize.region,
+          region: prize.region || "International",
+          country: prize.country || "International",
           category: safeCategory,
-          entry_fee: prize.entry_fee ?? 0,
-          artist_fee: prize.artist_fee ?? false,
-          age_limit: prize.age_limit,
-          prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
-          geo_scope: prize.country,
+          fee: prize.entry_fee ?? null,
+          prize_amount: prize.prize_amount ?? null,
+          eligibility_restriction: prize.eligibility_restriction,
+          age_min: ageMin,
+          age_max: ageMax,
+          currency: "EUR",
+          requirements: [],
+          is_archived: false,
+          is_short_term: false,
         };
 
         if (existingId && existingId !== 'new') {
-          updateOperations.push({ id: existingId, data: tenderData });
+          // Update existing - don't overwrite is_archived or is_short_term
+          const { is_archived, is_short_term, ...updateData } = artPrizeData;
+          updateOperations.push({ id: existingId, data: updateData });
         } else if (!existingId) {
           // Add to maps to prevent duplicates within same batch
           existingByUrl.set(prize.website, 'new');
           existingByTitleDeadline.set(`${normalizeTitle(prize.name)}_${prize.deadline}`, 'new');
-          newTenders.push(tenderData);
+          newPrizes.push(artPrizeData);
         } else {
           skippedCount++;
         }
       }
 
-      logStep(`Prepared`, { new: newTenders.length, updates: updateOperations.length, skipped: skippedCount });
+      logStep(`Prepared`, { new: newPrizes.length, updates: updateOperations.length, skipped: skippedCount });
 
-      // BATCH INSERT new tenders (much faster than one-by-one)
-      if (newTenders.length > 0) {
+      // BATCH INSERT new art_prizes (much faster than one-by-one)
+      if (newPrizes.length > 0) {
         const { data: insertedData, error: batchInsertError } = await supabaseClient
-          .from("tenders")
-          .insert(newTenders)
+          .from("art_prizes")
+          .insert(newPrizes)
           .select("id");
 
         if (batchInsertError) {
           logStep("Batch Insert Fehler", { error: batchInsertError.message, code: batchInsertError.code });
           // Fallback: try individual inserts
-          for (const tender of newTenders) {
-            const { error: singleError } = await supabaseClient.from("tenders").insert(tender);
+          for (const prizeData of newPrizes) {
+            const { error: singleError } = await supabaseClient.from("art_prizes").insert(prizeData);
             if (!singleError) {
               newPrizesCount++;
             } else if (singleError.message.includes('duplicate') || singleError.code === '23505') {
               skippedCount++;
+            } else {
+              logStep("Single Insert Fehler", { error: singleError.message, name: prizeData.name });
             }
           }
         } else {
-          newPrizesCount = insertedData?.length || newTenders.length;
+          newPrizesCount = insertedData?.length || newPrizes.length;
           logStep(`Batch Insert OK`, { inserted: newPrizesCount });
         }
       }
@@ -574,12 +601,14 @@ serve(async (req) => {
       // Process updates (these need to be individual)
       for (const op of updateOperations) {
         const { error: updateError } = await supabaseClient
-          .from("tenders")
+          .from("art_prizes")
           .update(op.data)
           .eq("id", op.id);
         
         if (!updateError) {
           updatedCount++;
+        } else {
+          logStep("Update Fehler", { error: updateError.message, id: op.id });
         }
       }
 
