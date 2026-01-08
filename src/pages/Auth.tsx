@@ -458,13 +458,33 @@ export default function Auth() {
                   <Button
                     type="button"
                     className="w-full gradient-gold text-primary font-semibold border-0"
+                    disabled={isSubmitting}
                     onClick={async () => {
-                      setIsSubmitting(true);
-                      await startCheckout(priceId!);
-                      navigate(returnTo);
+                      // Check if session is established after signup
+                      if (user) {
+                        setIsSubmitting(true);
+                        await startCheckout(priceId!);
+                        navigate(returnTo);
+                      } else {
+                        // Session not ready yet - user needs to log in
+                        toast({
+                          title: language === 'de' ? 'Bitte anmelden' : 'Please log in',
+                          description: language === 'de' 
+                            ? 'Melden Sie sich mit Ihren Zugangsdaten an, um fortzufahren.'
+                            : 'Log in with your credentials to continue.',
+                        });
+                        setView('login');
+                        setSignupComplete(false);
+                        setCheckoutTimeout(false);
+                      }
                     }}
                   >
-                    {language === 'de' ? 'Weiter zur Zahlung' : 'Proceed to Payment'}
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    {user 
+                      ? (language === 'de' ? 'Weiter zur Zahlung' : 'Proceed to Payment')
+                      : (language === 'de' ? 'Anmelden & fortfahren' : 'Log in & continue')}
                   </Button>
                 ) : (
                   <Button
