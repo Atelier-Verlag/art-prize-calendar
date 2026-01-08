@@ -316,66 +316,45 @@ export default function Admin() {
     setSaving(false);
   };
 
-  const buildFetchPrizesUrl = () => {
-    const base = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-    if (!base) return null;
-    return `${base.replace(/\/$/, '')}/functions/v1/fetch-prizes`;
-  };
-
   const invokeFetchPrizes = async (payload?: Record<string, unknown>) => {
-    const functionUrl = buildFetchPrizesUrl();
-    console.log('[Admin] Invoking function at:', functionUrl);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+    const functionUrl = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/fetch-prizes`;
+    
+    console.log('[Admin] Calling fetch-prizes via direct fetch:', functionUrl);
 
-    // 1) Preferred: invoke via client SDK
+    // Get user token for authenticated request
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    const res = await fetch(functionUrl, {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token ?? anonKey}`,
+        'apikey': anonKey,
+      },
+      body: JSON.stringify(payload ?? {}),
+    });
+
+    const text = await res.text();
+    let json: unknown = null;
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-prizes', {
-        body: payload,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (error) throw error;
-      return { data, via: 'invoke' as const };
-    } catch (err) {
-      console.warn('[Admin] supabase.functions.invoke failed, trying direct fetch fallback:', err);
-
-      // 2) Fallback: direct fetch (full URL) for debugging connectivity
-      if (!functionUrl) throw err;
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
-      const authHeader = token ?? anonKey;
-
-      const res = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          ...(authHeader ? { Authorization: `Bearer ${authHeader}` } : {}),
-          ...(anonKey ? { apikey: anonKey } : {}),
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload ?? {}),
-      });
-
-      const text = await res.text();
-      let json: any = null;
-      try {
-        json = text ? JSON.parse(text) : null;
-      } catch {
-        // keep raw text
-      }
-
-      if (!res.ok) {
-        const e: any = new Error(`HTTP ${res.status} ${res.statusText}`);
-        e.status = res.status;
-        e.context = { body: json ?? text };
-        throw e;
-      }
-
-      return { data: json, via: 'fetch' as const };
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      // keep raw text
     }
+
+    if (!res.ok) {
+      const e: Error & { status?: number; context?: unknown } = new Error(`HTTP ${res.status} ${res.statusText}`);
+      e.status = res.status;
+      e.context = { body: json ?? text };
+      throw e;
+    }
+
+    return { data: json, via: 'fetch' as const };
   };
 
   const handleStartScraper = async () => {
