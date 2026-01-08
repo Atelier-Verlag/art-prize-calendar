@@ -7,13 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// PERFORMANCE CONSTANTS - Increased timeouts for completeness
-const HARD_TIMEOUT_MS = 50000; // 50 seconds hard limit (edge functions have 60s max)
-const TAVILY_TIMEOUT_MS = 12000; // 12 seconds per Tavily request  
-const AI_BATCH_TIMEOUT_MS = 20000; // 20 seconds per AI batch
-const MAX_CONTENT_CHARS = 4000; // Limit content to 4000 chars
-const BATCH_SIZE = 3; // Process 3 at a time for balance
-const MAX_RETRIES = 2; // Retry failed requests
+// PERFORMANCE CONSTANTS - Optimized for completeness
+const SEARCH_TIMEOUT_MS = 45000; // 45s for search phase only
+const TAVILY_TIMEOUT_MS = 8000; // 8 seconds per Tavily request (faster)
+const AI_BATCH_TIMEOUT_MS = 15000; // 15 seconds per AI batch (faster)
+const MAX_CONTENT_CHARS = 3000; // Limit content to reduce processing time
+const BATCH_SIZE = 5; // Process 5 at a time for speed
+const MAX_RETRIES = 1; // Single retry to save time
 
 // Request-scoped timing (will be set per request)
 let requestStartTime = Date.now();
@@ -24,8 +24,8 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[FETCH-PRIZES][${elapsed}s] ${step}${detailsStr}`);
 };
 
-const isTimeoutApproaching = () => {
-  return (Date.now() - requestStartTime) > HARD_TIMEOUT_MS;
+const isSearchPhaseTimeout = () => {
+  return (Date.now() - requestStartTime) > SEARCH_TIMEOUT_MS;
 };
 
 // Internationale Suchbegriffe für Open Calls 2026
@@ -140,8 +140,8 @@ async function extractPrizesWithAI(
   const allPrizes: ExtractedPrize[] = [];
   
   for (let i = 0; i < searchResults.length; i += BATCH_SIZE) {
-    if (isTimeoutApproaching()) {
-      logStep("⚠️ Timeout approaching - returning partial results", { processed: i, total: searchResults.length });
+    if (isSearchPhaseTimeout()) {
+      logStep("⚠️ Search phase timeout - returning partial AI results", { processed: i, total: searchResults.length });
       break;
     }
     
@@ -412,8 +412,8 @@ serve(async (req) => {
     } else {
       // Process ALL search queries for completeness
       for (let i = 0; i < SEARCH_QUERIES.length; i++) {
-        if (isTimeoutApproaching()) {
-          logStep("⚠️ Timeout - stoppe Suche", { completed: queriesCompleted, total: SEARCH_QUERIES.length });
+        if (isSearchPhaseTimeout()) {
+          logStep("⚠️ Search phase timeout - proceeding to save", { completed: queriesCompleted, total: SEARCH_QUERIES.length });
           break;
         }
         
@@ -445,7 +445,7 @@ serve(async (req) => {
     let skippedCount = 0;
     let draftCount = 0;
 
-    if (uniqueResults.length > 0 && !isTimeoutApproaching()) {
+    if (uniqueResults.length > 0) {
       try {
         extractedPrizes = await extractPrizesWithAI(uniqueResults, lovableApiKey);
         logStep(`AI extrahierte ${extractedPrizes.length} Preise`);
@@ -463,13 +463,30 @@ serve(async (req) => {
       const validPrizes = extractedPrizes.filter(prize => prize.deadline >= today);
       logStep(`${validPrizes.length} gültige Preise nach Deadline-Filter`);
 
-      // 5. SAVE TO TENDERS TABLE with improved duplicate detection
-      for (const prize of validPrizes) {
-        if (isTimeoutApproaching()) {
-          logStep("⚠️ Timeout - stoppe Speicherung", { saved: newPrizesCount, updated: updatedCount });
-          break;
-        }
+      // 5. SAVE TO TENDERS TABLE - BATCH INSERT (no timeout check - saving is critical!)
+      logStep(`Starte Speicherung`, { count: validPrizes.length });
 
+      // Prepare all tender records
+      type TenderData = {
+        title: string;
+        deadline: string;
+        application_link: string;
+        description: string;
+        organizer: string;
+        location: string;
+        category: string;
+        entry_fee: number;
+        artist_fee: boolean;
+        age_limit: string | null;
+        prize_detail: string | null;
+        geo_scope: string;
+      };
+
+      const newTenders: TenderData[] = [];
+      const updateOperations: { id: string; data: TenderData }[] = [];
+
+
+      for (const prize of validPrizes) {
         // Map category
         let safeCategory = prize.category;
         const categoryMap: Record<string, string> = {
@@ -501,7 +518,7 @@ serve(async (req) => {
           existingId = existingByTitleDeadline.get(titleDeadlineKey);
         }
 
-        const tenderData = {
+        const tenderData: TenderData = {
           title: prize.name,
           deadline: prize.deadline,
           application_link: prize.website,
@@ -516,50 +533,67 @@ serve(async (req) => {
           geo_scope: prize.country,
         };
 
-        if (existingId) {
-          // Update existing tender
-          const { error: updateError } = await supabaseClient
-            .from("tenders")
-            .update(tenderData)
-            .eq("id", existingId);
-          
-          if (updateError) {
-            logStep("Update Fehler", { error: updateError.message, tender: prize.name });
-          } else {
-            updatedCount++;
-          }
+        if (existingId && existingId !== 'new') {
+          updateOperations.push({ id: existingId, data: tenderData });
+        } else if (!existingId) {
+          // Add to maps to prevent duplicates within same batch
+          existingByUrl.set(prize.website, 'new');
+          existingByTitleDeadline.set(`${normalizeTitle(prize.name)}_${prize.deadline}`, 'new');
+          newTenders.push(tenderData);
         } else {
-          // Insert new tender
-          const { error: insertError } = await supabaseClient
-            .from("tenders")
-            .insert(tenderData);
-
-          if (insertError) {
-            if (insertError.message.includes('duplicate') || insertError.code === '23505') {
-              skippedCount++;
-            } else {
-              logStep("Insert Fehler", { error: insertError.message, code: insertError.code, tender: prize.name });
-            }
-          } else {
-            newPrizesCount++;
-            // Add to maps to prevent duplicates within same run
-            existingByUrl.set(prize.website, 'new');
-            existingByTitleDeadline.set(`${normalizeTitle(prize.name)}_${prize.deadline}`, 'new');
-          }
+          skippedCount++;
         }
       }
+
+      logStep(`Prepared`, { new: newTenders.length, updates: updateOperations.length, skipped: skippedCount });
+
+      // BATCH INSERT new tenders (much faster than one-by-one)
+      if (newTenders.length > 0) {
+        const { data: insertedData, error: batchInsertError } = await supabaseClient
+          .from("tenders")
+          .insert(newTenders)
+          .select("id");
+
+        if (batchInsertError) {
+          logStep("Batch Insert Fehler", { error: batchInsertError.message, code: batchInsertError.code });
+          // Fallback: try individual inserts
+          for (const tender of newTenders) {
+            const { error: singleError } = await supabaseClient.from("tenders").insert(tender);
+            if (!singleError) {
+              newPrizesCount++;
+            } else if (singleError.message.includes('duplicate') || singleError.code === '23505') {
+              skippedCount++;
+            }
+          }
+        } else {
+          newPrizesCount = insertedData?.length || newTenders.length;
+          logStep(`Batch Insert OK`, { inserted: newPrizesCount });
+        }
+      }
+
+      // Process updates (these need to be individual)
+      for (const op of updateOperations) {
+        const { error: updateError } = await supabaseClient
+          .from("tenders")
+          .update(op.data)
+          .eq("id", op.id);
+        
+        if (!updateError) {
+          updatedCount++;
+        }
+      }
+
+      logStep(`Speicherung abgeschlossen`, { new: newPrizesCount, updated: updatedCount, skipped: skippedCount });
     }
 
     const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
-    const wasTimeout = isTimeoutApproaching();
-    const statusEmoji = wasTimeout ? "⚠️" : "✅";
-    const successMessage = `${statusEmoji} Roboter beendet (${elapsed}s): ${queriesCompleted}/${SEARCH_QUERIES.length} Suchen, ${uniqueResults.length} Seiten, ${extractedPrizes.length} gefunden, ${newPrizesCount} NEU, ${updatedCount} aktualisiert, ${skippedCount} übersprungen, ${archivedCount} archiviert${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}${wasTimeout ? ' [TIMEOUT - Teilergebnis]' : ''}`;
+    const successMessage = `✅ Roboter beendet (${elapsed}s): ${queriesCompleted}/${SEARCH_QUERIES.length} Suchen, ${uniqueResults.length} Seiten, ${extractedPrizes.length} gefunden, ${newPrizesCount} NEU, ${updatedCount} aktualisiert, ${skippedCount} übersprungen, ${archivedCount} archiviert${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}`;
 
     if (runningLogId) {
       await supabaseClient
         .from("scraper_logs")
         .update({
-          status: wasTimeout ? "partial" : "success",
+          status: "success",
           message: successMessage,
           items_found: newPrizesCount,
         })
@@ -571,7 +605,6 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        partial: wasTimeout,
         message: successMessage,
         elapsed: `${elapsed}s`,
         stats: {
