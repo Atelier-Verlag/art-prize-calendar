@@ -7,12 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// PERFORMANCE CONSTANTS
-const HARD_TIMEOUT_MS = 25000; // 25 seconds hard limit
-const TAVILY_TIMEOUT_MS = 8000; // 8 seconds per Tavily request
-const AI_BATCH_TIMEOUT_MS = 15000; // 15 seconds per AI batch
-const MAX_CONTENT_CHARS = 4000; // Limit content to 4000 chars
+// PERFORMANCE CONSTANTS - Reduced timeouts to ensure completion before Supabase kills the function
+const HARD_TIMEOUT_MS = 18000; // 18 seconds hard limit (leaves 2s buffer for final log update)
+const TAVILY_TIMEOUT_MS = 5000; // 5 seconds per Tavily request  
+const AI_BATCH_TIMEOUT_MS = 10000; // 10 seconds per AI batch
+const MAX_CONTENT_CHARS = 3000; // Limit content to 3000 chars
 const BATCH_SIZE = 1; // Process one at a time for stability
+const MAX_SEARCH_QUERIES = 2; // Only run first 2 search queries to save time
 
 // Request-scoped timing (will be set per request)
 let requestStartTime = Date.now();
@@ -371,8 +372,9 @@ serve(async (req) => {
         logStep(`Einzelscan Fehler`, { error: String(e) });
       }
     } else {
-      // Process queries but check for timeout
-      for (const query of SEARCH_QUERIES) {
+      // Process only first MAX_SEARCH_QUERIES to ensure we finish in time
+      const queriesToRun = SEARCH_QUERIES.slice(0, MAX_SEARCH_QUERIES);
+      for (const query of queriesToRun) {
         if (isTimeoutApproaching()) {
           logStep("⚠️ Timeout - stoppe Suche", { completed: allSearchResults.length });
           break;
