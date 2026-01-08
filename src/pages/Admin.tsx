@@ -361,40 +361,54 @@ export default function Admin() {
     setScraperRunning(true);
     setScanningSourceName(null); // Full scan, no specific source
 
-    try {
-      const { data, via } = await invokeFetchPrizes();
+    // Fire-and-forget: trigger the scraper without waiting for completion
+    toast({
+      title: 'Roboter gestartet',
+      description: 'Der Roboter läuft im Hintergrund. Bitte warten Sie, während die Tenders aktualisiert werden. Die Logs werden automatisch aktualisiert.',
+    });
 
-      const stats = (data as any)?.stats || {};
-      const message = (data as any)?.partial
-        ? `Teilscan abgeschlossen (Timeout): ${stats.saved || 0} neu, ${stats.archived || 0} archiviert.`
-        : (data as any)?.message || 'Der Kunstpreis-Roboter wurde erfolgreich abgeschlossen.';
+    // Trigger the scraper in background (don't await)
+    invokeFetchPrizes()
+      .then(({ data }) => {
+        const stats = (data as any)?.stats || {};
+        const message = (data as any)?.partial
+          ? `Teilscan abgeschlossen (Timeout): ${stats.saved || 0} neu, ${stats.archived || 0} gelöscht.`
+          : (data as any)?.message || 'Der Roboter wurde erfolgreich abgeschlossen.';
 
-      toast({
-        title: (data as any)?.partial ? `Roboter (Teilscan) [${via}]` : `Roboter abgeschlossen [${via}]`,
-        description: message,
+        toast({
+          title: (data as any)?.partial ? 'Roboter (Teilscan)' : 'Roboter abgeschlossen',
+          description: message,
+        });
+
+        loadScraperLogs();
+      })
+      .catch((error) => {
+        console.error('Error in scraper:', error);
+        const errAny = error as any;
+        const technical = [
+          errAny?.status ? `status=${errAny.status}` : null,
+          errAny?.message,
+          errAny?.context ? JSON.stringify(errAny.context) : null,
+        ]
+          .filter(Boolean)
+          .join(' | ');
+
+        toast({
+          title: 'Roboter Fehler',
+          description: technical || 'Unbekannter Fehler',
+          variant: 'destructive',
+        });
+      })
+      .finally(() => {
+        setScraperRunning(false);
+        loadScraperLogs();
       });
 
-      await loadScraperLogs();
-    } catch (error) {
-      console.error('Error starting scraper:', error);
-      const errAny = error as any;
-      const technical = [
-        errAny?.name,
-        errAny?.status ? `status=${errAny.status}` : null,
-        errAny?.message,
-        errAny?.context ? JSON.stringify(errAny.context) : null,
-      ]
-        .filter(Boolean)
-        .join(' | ');
-
-      toast({
-        title: 'Fehler beim Starten (technisch)',
-        description: technical || 'Unbekannter Fehler',
-        variant: 'destructive',
-      });
-    } finally {
+    // Immediately stop showing "running" state after 2 seconds
+    // The actual work continues in the background
+    setTimeout(() => {
       setScraperRunning(false);
-    }
+    }, 2000);
   };
 
   const handleScanSource = async (source: ScraperSource) => {

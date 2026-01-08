@@ -10,9 +10,9 @@ const corsHeaders = {
 // PERFORMANCE CONSTANTS
 const HARD_TIMEOUT_MS = 25000; // 25 seconds hard limit
 const TAVILY_TIMEOUT_MS = 8000; // 8 seconds per Tavily request
-const AI_BATCH_TIMEOUT_MS = 12000; // 12 seconds per AI batch
+const AI_BATCH_TIMEOUT_MS = 15000; // 15 seconds per AI batch
 const MAX_CONTENT_CHARS = 4000; // Limit content to 4000 chars
-const BATCH_SIZE = 3; // Smaller batches for faster processing
+const BATCH_SIZE = 1; // Process one at a time for stability
 
 // Request-scoped timing (will be set per request)
 let requestStartTime = Date.now();
@@ -338,25 +338,24 @@ serve(async (req) => {
     if (!tavilyApiKey) throw new Error("TAVILY_API_KEY fehlt");
     if (!lovableApiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
-    // 1. ARCHIVIERUNG
-    logStep("Archiviere abgelaufene Preise");
+    // 1. ARCHIVIERUNG - Delete expired tenders (past deadline)
+    logStep("Lösche abgelaufene Tenders");
     const today = new Date().toISOString().split('T')[0];
     
-    const { data: expiredPrizes } = await supabaseClient
-      .from("art_prizes")
+    const { data: expiredTenders } = await supabaseClient
+      .from("tenders")
       .select("id")
-      .eq("is_archived", false)
       .lt("deadline", today);
 
     let archivedCount = 0;
-    if (expiredPrizes && expiredPrizes.length > 0) {
-      const expiredIds = expiredPrizes.map(p => p.id);
+    if (expiredTenders && expiredTenders.length > 0) {
+      const expiredIds = expiredTenders.map(p => p.id);
       await supabaseClient
-        .from("art_prizes")
-        .update({ is_archived: true })
+        .from("tenders")
+        .delete()
         .in("id", expiredIds);
-      archivedCount = expiredPrizes.length;
-      logStep(`${archivedCount} archiviert`);
+      archivedCount = expiredTenders.length;
+      logStep(`${archivedCount} abgelaufene Tenders gelöscht`);
     }
 
     // 2. SUCHE - with timeout checks
@@ -411,70 +410,36 @@ serve(async (req) => {
       const validPrizes = extractedPrizes.filter(prize => prize.deadline >= today);
       logStep(`${validPrizes.length} gültige Preise`);
 
-      // 4. SAVE - with timeout checks
+      // 4. SAVE TO TENDERS TABLE ONLY - with timeout checks
       for (const prize of validPrizes) {
         if (isTimeoutApproaching()) {
           logStep("⚠️ Timeout - stoppe Speicherung", { saved: newPrizesCount });
           break;
         }
 
-        const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art", "Kunstpreis", "Wettbewerb", "Stipendium", "Förderung", "Residenz", "Ausstellung", "Kunst am Bau"];
-        
+        // Map category to valid tenders categories
         let safeCategory = prize.category;
-        if (safeCategory === "grant") safeCategory = "Stipendium";
-        if (safeCategory === "exhibition") safeCategory = "Ausstellung";
-        if (safeCategory === "residency") safeCategory = "Residenz";
-        if (safeCategory === "public_art") safeCategory = "Kunst am Bau";
-        if (!validCategories.includes(safeCategory)) safeCategory = "Wettbewerb";
-
-        // Check for existing entry
-        const { data: existingByUrl } = await supabaseClient
-          .from("art_prizes")
-          .select("id")
-          .eq("website", prize.website)
-          .maybeSingle();
-
-        if (existingByUrl) {
-          await supabaseClient
-            .from("art_prizes")
-            .update({
-              name: prize.name,
-              deadline: prize.deadline,
-              description: prize.description,
-              organizer: prize.organizer,
-              region: prize.region,
-              country: prize.country,
-              category: safeCategory,
-              fee: prize.fee,
-              prize_amount: prize.prize_amount,
-              eligibility_restriction: prize.eligibility_restriction,
-              is_archived: false,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", existingByUrl.id);
-        } else {
-          const { error: insertError } = await supabaseClient
-            .from("art_prizes")
-            .insert({
-              name: prize.name,
-              deadline: prize.deadline,
-              website: prize.website,
-              description: prize.description,
-              organizer: prize.organizer,
-              region: prize.region,
-              country: prize.country,
-              category: safeCategory,
-              fee: prize.fee,
-              prize_amount: prize.prize_amount,
-              eligibility_restriction: prize.eligibility_restriction,
-              is_archived: false,
-              is_short_term: false,
-            });
-
-          if (!insertError) newPrizesCount++;
+        const categoryMap: Record<string, string> = {
+          "grant": "Stipendium",
+          "exhibition": "Ausstellung", 
+          "residency": "Residenz",
+          "public_art": "Kunst am Bau",
+          "painting": "Wettbewerb",
+          "sculpture": "Wettbewerb",
+          "media": "Wettbewerb",
+          "photography": "Wettbewerb",
+          "performance": "Wettbewerb",
+          "mixed": "Wettbewerb",
+        };
+        if (categoryMap[safeCategory]) {
+          safeCategory = categoryMap[safeCategory];
+        }
+        const validCategories = ["Kunstpreis", "Wettbewerb", "Stipendium", "Förderung", "Residenz", "Ausstellung", "Kunst am Bau"];
+        if (!validCategories.includes(safeCategory)) {
+          safeCategory = "Wettbewerb";
         }
 
-        // Save to tenders table
+        // Check for existing tender by application_link
         const { data: existingTender } = await supabaseClient
           .from("tenders")
           .select("id")
@@ -482,7 +447,8 @@ serve(async (req) => {
           .maybeSingle();
 
         if (existingTender) {
-          await supabaseClient
+          // Update existing tender
+          const { error: updateError } = await supabaseClient
             .from("tenders")
             .update({
               title: prize.name,
@@ -491,15 +457,20 @@ serve(async (req) => {
               organizer: prize.organizer,
               location: prize.region,
               category: safeCategory,
-              entry_fee: prize.entry_fee,
+              entry_fee: prize.entry_fee ?? 0,
               artist_fee: prize.artist_fee ?? false,
               age_limit: prize.age_limit,
               prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
               geo_scope: prize.country,
             })
             .eq("id", existingTender.id);
+          
+          if (updateError) {
+            logStep("Update Fehler", { error: updateError.message, tender: prize.name });
+          }
         } else {
-          await supabaseClient
+          // Insert new tender
+          const { error: insertError } = await supabaseClient
             .from("tenders")
             .insert({
               title: prize.name,
@@ -509,12 +480,18 @@ serve(async (req) => {
               organizer: prize.organizer,
               location: prize.region,
               category: safeCategory,
-              entry_fee: prize.entry_fee,
+              entry_fee: prize.entry_fee ?? 0,
               artist_fee: prize.artist_fee ?? false,
               age_limit: prize.age_limit,
               prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
               geo_scope: prize.country,
             });
+
+          if (insertError) {
+            logStep("Insert Fehler", { error: insertError.message, tender: prize.name });
+          } else {
+            newPrizesCount++;
+          }
         }
       }
     }
