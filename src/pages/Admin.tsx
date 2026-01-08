@@ -6,7 +6,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -789,7 +788,7 @@ export default function Admin() {
                       <CardDescription>{section.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <Textarea
+                      <textarea
                         value={contents[section.key]}
                         onChange={(e) =>
                           setContents((prev) => ({
@@ -798,7 +797,7 @@ export default function Admin() {
                           }))
                         }
                         placeholder={`Geben Sie hier den Inhalt für ${section.title} ein...`}
-                        className="min-h-[400px] font-mono text-sm"
+                        className="w-full h-96 border p-4 font-mono text-sm"
                       />
                       <div className="flex justify-end">
                         <Button
