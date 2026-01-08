@@ -7,13 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// PERFORMANCE CONSTANTS - Reduced timeouts to ensure completion before Supabase kills the function
-const HARD_TIMEOUT_MS = 18000; // 18 seconds hard limit (leaves 2s buffer for final log update)
-const TAVILY_TIMEOUT_MS = 5000; // 5 seconds per Tavily request  
-const AI_BATCH_TIMEOUT_MS = 10000; // 10 seconds per AI batch
-const MAX_CONTENT_CHARS = 3000; // Limit content to 3000 chars
-const BATCH_SIZE = 1; // Process one at a time for stability
-const MAX_SEARCH_QUERIES = 2; // Only run first 2 search queries to save time
+// PERFORMANCE CONSTANTS - Increased timeouts for completeness
+const HARD_TIMEOUT_MS = 50000; // 50 seconds hard limit (edge functions have 60s max)
+const TAVILY_TIMEOUT_MS = 12000; // 12 seconds per Tavily request  
+const AI_BATCH_TIMEOUT_MS = 20000; // 20 seconds per AI batch
+const MAX_CONTENT_CHARS = 4000; // Limit content to 4000 chars
+const BATCH_SIZE = 3; // Process 3 at a time for balance
+const MAX_RETRIES = 2; // Retry failed requests
 
 // Request-scoped timing (will be set per request)
 let requestStartTime = Date.now();
@@ -28,7 +28,7 @@ const isTimeoutApproaching = () => {
   return (Date.now() - requestStartTime) > HARD_TIMEOUT_MS;
 };
 
-// Erweiterte internationale Suchbegriffe für Open Calls 2026 (nur 2026!)
+// Internationale Suchbegriffe für Open Calls 2026
 const SEARCH_QUERIES = [
   "International Art Open Calls 2026",
   "Kunstpreise & Wettbewerbe 2026 Deutschland",
@@ -66,22 +66,33 @@ interface ExtractedPrize {
   entry_fee: number | null;
 }
 
-// Timeout wrapper for fetch requests
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Request timed out after ${timeoutMs}ms`);
+// Timeout wrapper for fetch requests with retry
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number, retries = MAX_RETRIES): Promise<Response> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      const isTimeout = error instanceof Error && error.name === 'AbortError';
+      
+      if (attempt < retries) {
+        logStep(`Retry ${attempt}/${retries}`, { url: url.substring(0, 50), isTimeout });
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+        continue;
+      }
+      
+      if (isTimeout) {
+        throw new Error(`Request timed out after ${timeoutMs}ms (${retries} attempts)`);
+      }
+      throw error;
     }
-    throw error;
   }
+  throw new Error('Max retries exceeded');
 }
 
 async function searchWithTavily(query: string, apiKey: string): Promise<TavilyResult[]> {
@@ -94,8 +105,8 @@ async function searchWithTavily(query: string, apiKey: string): Promise<TavilyRe
       body: JSON.stringify({
         api_key: apiKey,
         query: query,
-        search_depth: "basic", // Changed from "advanced" for speed
-        max_results: 5, // Reduced from 10
+        search_depth: "advanced", // Use advanced for better results
+        max_results: 10, // Get more results
         include_answer: false,
         include_raw_content: false,
       }),
@@ -109,7 +120,6 @@ async function searchWithTavily(query: string, apiKey: string): Promise<TavilyRe
     const data = await response.json();
     const results = (data.results || []).map((r: TavilyResult) => ({
       ...r,
-      // Truncate content to MAX_CONTENT_CHARS
       content: r.content?.substring(0, MAX_CONTENT_CHARS) || '',
     }));
     
@@ -117,7 +127,7 @@ async function searchWithTavily(query: string, apiKey: string): Promise<TavilyRe
     return results;
   } catch (error) {
     logStep(`Tavily-Fehler für "${query}"`, { error: String(error) });
-    return []; // Return empty instead of throwing
+    return [];
   }
 }
 
@@ -130,7 +140,6 @@ async function extractPrizesWithAI(
   const allPrizes: ExtractedPrize[] = [];
   
   for (let i = 0; i < searchResults.length; i += BATCH_SIZE) {
-    // Check for approaching timeout
     if (isTimeoutApproaching()) {
       logStep("⚠️ Timeout approaching - returning partial results", { processed: i, total: searchResults.length });
       break;
@@ -148,7 +157,6 @@ async function extractPrizesWithAI(
       logStep(`Batch ${batchNum} OK`, { found: batchPrizes.length });
     } catch (e) {
       logStep(`Batch ${batchNum} FEHLER`, { error: String(e) });
-      // Continue with next batch
     }
   }
 
@@ -160,14 +168,12 @@ async function extractPrizeBatch(
   searchResults: TavilyResult[],
   lovableApiKey: string
 ): Promise<ExtractedPrize[]> {
-  // Compact format to reduce token usage
   const resultsText = searchResults
-    .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content.substring(0, 2000)}`)
+    .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content.substring(0, 3000)}`)
     .join("\n---\n");
 
   const today = new Date().toISOString().split('T')[0];
   
-  // STREAMLINED PROMPT - focused on extraction only
   const systemPrompt = `Du extrahierst Kunstausschreibungen. Heute: ${today}. NUR Deadlines nach ${today}!
 
 EXTRAHIERE NUR:
@@ -195,7 +201,7 @@ Sei SCHNELL und PRÄZISE. Keine Erklärungen.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite", // Faster model
+        model: "google/gemini-2.5-flash", // Better model for accuracy
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Extrahiere Kunstausschreibungen 2026:\n\n${resultsText}` }
@@ -264,7 +270,7 @@ Sei SCHNELL und PRÄZISE. Keine Erklärungen.`;
 function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
   return searchResults
     .filter(r => r.title && r.url)
-    .slice(0, 5) // Reduced from 10
+    .slice(0, 10)
     .map(r => ({
       name: `[ENTWURF] ${r.title.substring(0, 80)}`,
       deadline: "2026-12-31",
@@ -284,13 +290,20 @@ function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
     }));
 }
 
+// Normalize title for comparison
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\[entwurf\]/gi, '')
+    .replace(/[^a-z0-9äöüß]/gi, '')
+    .trim();
+}
+
 serve(async (req) => {
   console.log(`[ROBOT] Invoked`, { method: req.method, url: req.url });
 
-  // Reset request timing for each new request
   requestStartTime = Date.now();
   
-  // Global CORS preflight handler - MUST return 'ok' for browser compatibility
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -300,7 +313,6 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } }
   );
-
 
   const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -319,7 +331,7 @@ serve(async (req) => {
   let runningLogId: string | null = null;
 
   try {
-    const modeLabel = isSingleUrlMode ? `Einzelscan: ${sourceName || singleUrl}` : "Internationale Suche";
+    const modeLabel = isSingleUrlMode ? `Einzelscan: ${sourceName || singleUrl}` : "Vollständige internationale Suche";
     logStep(`🤖 Roboter gestartet - ${modeLabel}`);
 
     const { data: logEntry } = await supabaseClient
@@ -328,7 +340,7 @@ serve(async (req) => {
         status: "running",
         message: isSingleUrlMode 
           ? `Einzelscan: ${sourceName || singleUrl}` 
-          : "Roboter gestartet - Suche läuft...",
+          : "Roboter gestartet - Vollständige Suche läuft...",
         items_found: 0,
       })
       .select("id")
@@ -336,10 +348,14 @@ serve(async (req) => {
     
     runningLogId = logEntry?.id || null;
 
-    if (!tavilyApiKey) throw new Error("TAVILY_API_KEY fehlt");
-    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY fehlt");
+    if (!tavilyApiKey) {
+      throw new Error("TAVILY_API_KEY fehlt - bitte in Secrets konfigurieren");
+    }
+    if (!lovableApiKey) {
+      throw new Error("LOVABLE_API_KEY fehlt - bitte in Secrets konfigurieren");
+    }
 
-    // 1. ARCHIVIERUNG - Delete expired tenders (past deadline)
+    // 1. ARCHIVIERUNG - Delete expired tenders
     logStep("Lösche abgelaufene Tenders");
     const today = new Date().toISOString().split('T')[0];
     
@@ -359,8 +375,29 @@ serve(async (req) => {
       logStep(`${archivedCount} abgelaufene Tenders gelöscht`);
     }
 
-    // 2. SUCHE - with timeout checks
+    // 2. FETCH EXISTING TENDERS for duplicate detection
+    const { data: existingTenders } = await supabaseClient
+      .from("tenders")
+      .select("id, title, application_link, deadline");
+    
+    const existingByUrl = new Map<string, string>();
+    const existingByTitleDeadline = new Map<string, string>();
+    
+    if (existingTenders) {
+      for (const t of existingTenders) {
+        if (t.application_link) {
+          existingByUrl.set(t.application_link, t.id);
+        }
+        const key = `${normalizeTitle(t.title)}_${t.deadline}`;
+        existingByTitleDeadline.set(key, t.id);
+      }
+    }
+    
+    logStep(`Existierende Tenders geladen`, { count: existingTenders?.length || 0 });
+
+    // 3. SUCHE - Process ALL search queries
     let allSearchResults: TavilyResult[] = [];
+    let queriesCompleted = 0;
     
     if (isSingleUrlMode && singleUrl) {
       logStep(`Einzelscan: ${singleUrl}`);
@@ -368,37 +405,50 @@ serve(async (req) => {
         const hostname = new URL(singleUrl).hostname;
         const results = await searchWithTavily(`site:${hostname} Kunstpreis OR Wettbewerb OR Open Call 2026`, tavilyApiKey);
         allSearchResults = results;
+        queriesCompleted = 1;
       } catch (e) {
         logStep(`Einzelscan Fehler`, { error: String(e) });
       }
     } else {
-      // Process only first MAX_SEARCH_QUERIES to ensure we finish in time
-      const queriesToRun = SEARCH_QUERIES.slice(0, MAX_SEARCH_QUERIES);
-      for (const query of queriesToRun) {
+      // Process ALL search queries for completeness
+      for (let i = 0; i < SEARCH_QUERIES.length; i++) {
         if (isTimeoutApproaching()) {
-          logStep("⚠️ Timeout - stoppe Suche", { completed: allSearchResults.length });
+          logStep("⚠️ Timeout - stoppe Suche", { completed: queriesCompleted, total: SEARCH_QUERIES.length });
           break;
         }
+        
+        const query = SEARCH_QUERIES[i];
+        logStep(`Suche ${i + 1}/${SEARCH_QUERIES.length}`);
+        
         const results = await searchWithTavily(query, tavilyApiKey);
         allSearchResults = allSearchResults.concat(results);
+        queriesCompleted++;
+        
+        // Small delay between queries to avoid rate limits
+        if (i < SEARCH_QUERIES.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
     }
 
-    // Deduplicate
+    // Deduplicate by URL
     const uniqueResults = allSearchResults.filter(
       (result, index, self) => index === self.findIndex(r => r.url === result.url)
     );
     
-    logStep(`${uniqueResults.length} eindeutige Ergebnisse`);
+    logStep(`${uniqueResults.length} eindeutige Ergebnisse aus ${queriesCompleted} Suchen`);
 
-    // 3. AI EXTRACTION
+    // 4. AI EXTRACTION
     let extractedPrizes: ExtractedPrize[] = [];
     let newPrizesCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
     let draftCount = 0;
 
     if (uniqueResults.length > 0 && !isTimeoutApproaching()) {
       try {
         extractedPrizes = await extractPrizesWithAI(uniqueResults, lovableApiKey);
+        logStep(`AI extrahierte ${extractedPrizes.length} Preise`);
       } catch (aiError) {
         logStep("AI-Fehler, erstelle Entwürfe", { error: String(aiError) });
       }
@@ -406,20 +456,21 @@ serve(async (req) => {
       if (extractedPrizes.length === 0 && uniqueResults.length > 0) {
         extractedPrizes = createDraftPrizes(uniqueResults);
         draftCount = extractedPrizes.length;
+        logStep(`${draftCount} Entwürfe erstellt als Fallback`);
       }
 
       // Filter expired
       const validPrizes = extractedPrizes.filter(prize => prize.deadline >= today);
-      logStep(`${validPrizes.length} gültige Preise`);
+      logStep(`${validPrizes.length} gültige Preise nach Deadline-Filter`);
 
-      // 4. SAVE TO TENDERS TABLE ONLY - with timeout checks
+      // 5. SAVE TO TENDERS TABLE with improved duplicate detection
       for (const prize of validPrizes) {
         if (isTimeoutApproaching()) {
-          logStep("⚠️ Timeout - stoppe Speicherung", { saved: newPrizesCount });
+          logStep("⚠️ Timeout - stoppe Speicherung", { saved: newPrizesCount, updated: updatedCount });
           break;
         }
 
-        // Map category to valid tenders categories
+        // Map category
         let safeCategory = prize.category;
         const categoryMap: Record<string, string> = {
           "grant": "Stipendium",
@@ -441,58 +492,59 @@ serve(async (req) => {
           safeCategory = "Wettbewerb";
         }
 
-        // Check for existing tender by application_link
-        const { data: existingTender } = await supabaseClient
-          .from("tenders")
-          .select("id")
-          .eq("application_link", prize.website)
-          .maybeSingle();
+        // Check for existing by URL first
+        let existingId = existingByUrl.get(prize.website);
+        
+        // If not found by URL, check by normalized title + deadline
+        if (!existingId) {
+          const titleDeadlineKey = `${normalizeTitle(prize.name)}_${prize.deadline}`;
+          existingId = existingByTitleDeadline.get(titleDeadlineKey);
+        }
 
-        if (existingTender) {
+        const tenderData = {
+          title: prize.name,
+          deadline: prize.deadline,
+          application_link: prize.website,
+          description: prize.description,
+          organizer: prize.organizer,
+          location: prize.region,
+          category: safeCategory,
+          entry_fee: prize.entry_fee ?? 0,
+          artist_fee: prize.artist_fee ?? false,
+          age_limit: prize.age_limit,
+          prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
+          geo_scope: prize.country,
+        };
+
+        if (existingId) {
           // Update existing tender
           const { error: updateError } = await supabaseClient
             .from("tenders")
-            .update({
-              title: prize.name,
-              deadline: prize.deadline,
-              description: prize.description,
-              organizer: prize.organizer,
-              location: prize.region,
-              category: safeCategory,
-              entry_fee: prize.entry_fee ?? 0,
-              artist_fee: prize.artist_fee ?? false,
-              age_limit: prize.age_limit,
-              prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
-              geo_scope: prize.country,
-            })
-            .eq("id", existingTender.id);
+            .update(tenderData)
+            .eq("id", existingId);
           
           if (updateError) {
             logStep("Update Fehler", { error: updateError.message, tender: prize.name });
+          } else {
+            updatedCount++;
           }
         } else {
           // Insert new tender
           const { error: insertError } = await supabaseClient
             .from("tenders")
-            .insert({
-              title: prize.name,
-              deadline: prize.deadline,
-              application_link: prize.website,
-              description: prize.description,
-              organizer: prize.organizer,
-              location: prize.region,
-              category: safeCategory,
-              entry_fee: prize.entry_fee ?? 0,
-              artist_fee: prize.artist_fee ?? false,
-              age_limit: prize.age_limit,
-              prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
-              geo_scope: prize.country,
-            });
+            .insert(tenderData);
 
           if (insertError) {
-            logStep("Insert Fehler", { error: insertError.message, tender: prize.name });
+            if (insertError.message.includes('duplicate') || insertError.code === '23505') {
+              skippedCount++;
+            } else {
+              logStep("Insert Fehler", { error: insertError.message, code: insertError.code, tender: prize.name });
+            }
           } else {
             newPrizesCount++;
+            // Add to maps to prevent duplicates within same run
+            existingByUrl.set(prize.website, 'new');
+            existingByTitleDeadline.set(`${normalizeTitle(prize.name)}_${prize.deadline}`, 'new');
           }
         }
       }
@@ -501,7 +553,7 @@ serve(async (req) => {
     const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
     const wasTimeout = isTimeoutApproaching();
     const statusEmoji = wasTimeout ? "⚠️" : "✅";
-    const successMessage = `${statusEmoji} Roboter beendet (${elapsed}s): ${uniqueResults.length} Seiten, ${extractedPrizes.length} gefunden, ${newPrizesCount} neu${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}, ${archivedCount} archiviert${wasTimeout ? ' [TIMEOUT - Teilergebnis]' : ''}`;
+    const successMessage = `${statusEmoji} Roboter beendet (${elapsed}s): ${queriesCompleted}/${SEARCH_QUERIES.length} Suchen, ${uniqueResults.length} Seiten, ${extractedPrizes.length} gefunden, ${newPrizesCount} NEU, ${updatedCount} aktualisiert, ${skippedCount} übersprungen, ${archivedCount} archiviert${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}${wasTimeout ? ' [TIMEOUT - Teilergebnis]' : ''}`;
 
     if (runningLogId) {
       await supabaseClient
@@ -523,10 +575,14 @@ serve(async (req) => {
         message: successMessage,
         elapsed: `${elapsed}s`,
         stats: {
+          queriesCompleted,
+          queriesTotal: SEARCH_QUERIES.length,
           searched: uniqueResults.length,
           extracted: extractedPrizes.length,
           drafts: draftCount,
-          saved: newPrizesCount,
+          new: newPrizesCount,
+          updated: updatedCount,
+          skipped: skippedCount,
           archived: archivedCount,
         },
       }),
@@ -535,21 +591,31 @@ serve(async (req) => {
   } catch (error) {
     const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep(`❌ FEHLER nach ${elapsed}s`, { message: errorMessage });
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    logStep(`❌ KRITISCHER FEHLER nach ${elapsed}s`, { 
+      message: errorMessage, 
+      stack: errorStack?.substring(0, 500) 
+    });
 
     if (runningLogId) {
       await supabaseClient
         .from("scraper_logs")
         .update({
           status: "error",
-          message: `Fehler nach ${elapsed}s: ${errorMessage}`,
+          message: `❌ Fehler nach ${elapsed}s: ${errorMessage}`,
           items_found: 0,
         })
         .eq("id", runningLogId);
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage, elapsed: `${elapsed}s` }),
+      JSON.stringify({ 
+        success: false, 
+        error: errorMessage, 
+        elapsed: `${elapsed}s`,
+        details: "Check scraper_logs table for full error history"
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
