@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut } from 'lucide-react';
+import { Save, Shield, ArrowLeft, RefreshCw, Bot, CheckCircle, XCircle, Loader2, Plus, Trash2, Link, Globe, LogOut, Clock } from 'lucide-react';
+import { RobotProgressIndicator } from '@/components/admin/RobotProgressIndicator';
 import { ArtPrizesManager } from '@/components/admin/ArtPrizesManager';
 import { SeminarWaitlistManager } from '@/components/admin/SeminarWaitlistManager';
 import { format } from 'date-fns';
@@ -148,6 +149,7 @@ export default function Admin() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [addingSource, setAddingSource] = useState(false);
   const [scanningSourceId, setScanningSourceId] = useState<string | null>(null);
+  const [scanningSourceName, setScanningSourceName] = useState<string | null>(null);
   // Only admins can use backend features
   const canUseBackend = !!user && isAdmin;
 
@@ -316,6 +318,7 @@ export default function Admin() {
 
   const handleStartScraper = async () => {
     setScraperRunning(true);
+    setScanningSourceName(null); // Full scan, no specific source
     
     try {
       const { data, error } = await supabase.functions.invoke('fetch-prizes');
@@ -324,9 +327,14 @@ export default function Admin() {
         throw error;
       }
       
+      const stats = data?.stats || {};
+      const message = data?.partial 
+        ? `Teilscan abgeschlossen (Timeout): ${stats.saved || 0} neu, ${stats.archived || 0} archiviert.`
+        : data?.message || 'Der Kunstpreis-Roboter wurde erfolgreich abgeschlossen.';
+      
       toast({
-        title: 'Roboter gestartet',
-        description: data?.message || 'Der Kunstpreis-Roboter wurde erfolgreich gestartet.',
+        title: data?.partial ? 'Roboter (Teilscan)' : 'Roboter abgeschlossen',
+        description: message,
       });
       
       // Logs neu laden
@@ -345,6 +353,7 @@ export default function Admin() {
 
   const handleScanSource = async (source: ScraperSource) => {
     setScanningSourceId(source.id);
+    setScanningSourceName(source.name);
     
     try {
       const { data, error } = await supabase.functions.invoke('fetch-prizes', {
@@ -355,9 +364,14 @@ export default function Admin() {
         throw error;
       }
       
+      const stats = data?.stats || {};
+      const message = data?.partial 
+        ? `Teilscan abgeschlossen (Timeout). ${stats.saved || 0} neue Einträge.`
+        : `"${source.name}" wurde gescannt. ${stats.saved || 0} neue Einträge gefunden.`;
+      
       toast({
-        title: 'Scan abgeschlossen',
-        description: `"${source.name}" wurde gescannt. ${data?.newPrizesCount || 0} neue Einträge gefunden.`,
+        title: data?.partial ? 'Teilscan abgeschlossen' : 'Scan abgeschlossen',
+        description: message,
       });
       
       // Logs neu laden
@@ -371,6 +385,7 @@ export default function Admin() {
       });
     } finally {
       setScanningSourceId(null);
+      setScanningSourceName(null);
     }
   };
 
@@ -911,6 +926,16 @@ export default function Admin() {
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Progress Indicator - shown when running */}
+                {(scraperRunning || scanningSourceId) && (
+                  <div className="mb-6">
+                    <RobotProgressIndicator 
+                      isRunning={scraperRunning || !!scanningSourceId}
+                      sourceName={scanningSourceName || undefined}
+                    />
+                  </div>
+                )}
+                
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-muted-foreground">Letzte Aktivitäten</h4>
                   {loadingLogs ? (
