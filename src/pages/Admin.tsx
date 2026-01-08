@@ -388,51 +388,26 @@ export default function Admin() {
     }, 2000);
   };
 
-  // DEBUG: Test connection with explicit session check and CORS mode
+  // DEBUG: Test connection using the official function invocation (avoids CORS / URL mismatches)
   const handleDebugConnection = async () => {
-    // Step 1: Check for session
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      alert(`SESSION ERROR: ${sessionError.message}`);
-      return;
-    }
-    
-    if (!sessionData.session) {
-      alert('STOP: No active session token found. Please logout and login again.');
-      return;
-    }
-    
-    alert(`Token found! User: ${sessionData.session.user.email}. Starting fetch...`);
-    
-    // Step 2: HARDCODED to cnl project where edge function is deployed
-    const CNL_PROJECT_URL = 'https://cnlbpibyedjrydmvunzm.supabase.co';
-    const CNL_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNubGJwaWJ5ZWRqcnlkbXZ1bnptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDU5NDIsImV4cCI6MjA4MjQyMTk0Mn0.vx6bWNyKcoMSrGwz26diInT_EAS65Q9cwVKOPx3SoyE';
-    
-    const functionUrl = `${CNL_PROJECT_URL}/functions/v1/fetch-prizes`;
-    
-    // Show the user exactly where we're going
-    alert(`Cross-Project Bridge:\n${functionUrl}\n\nUsing CNL project anon key`);
-    
-    // Step 3: Make the request with window.fetch and mode: 'cors'
     try {
-      const response = await window.fetch(functionUrl, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`,
-          'apikey': CNL_ANON_KEY,
-        },
-        body: JSON.stringify({}),
-      });
-      
-      const text = await response.text();
-      alert(`SUCCESS! Status: ${response.status} ${response.statusText}\n\nBody (first 500 chars):\n${text.substring(0, 500)}`);
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        alert(`SESSION ERROR: ${sessionError.message}`);
+        return;
+      }
+
+      if (!sessionData.session) {
+        alert('No active session. Please login as admin first.');
+        return;
+      }
+
+      alert(`Calling backend function...`);
+      const { data } = await invokeFetchPrizes();
+      alert(`OK\n\n${JSON.stringify(data).substring(0, 800)}`);
     } catch (err) {
-      const error = err as Error;
-      alert(`FETCH FAILED!\n\nName: ${error.name}\nMessage: ${error.message}\n\nURL was: ${functionUrl}\n\nThis is a client-side connectivity issue.`);
+      const error = err as any;
+      alert(`FAILED\n\n${error?.message || String(err)}\n\n${error?.context ? JSON.stringify(error.context).substring(0, 800) : ''}`);
     }
   };
 
