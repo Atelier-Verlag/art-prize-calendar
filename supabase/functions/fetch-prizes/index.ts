@@ -290,9 +290,9 @@ serve(async (req) => {
   // Reset request timing for each new request
   requestStartTime = Date.now();
   
-  // Global CORS preflight handler
+  // Global CORS preflight handler - MUST return 'ok' for browser compatibility
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   const supabaseClient = createClient(
