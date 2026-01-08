@@ -10,16 +10,19 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-roadmap]
-verify_jwt = true
+verify_jwt = false
 
 [functions.ai-consultant]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-application-letter]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-waitlist-confirmation]
 verify_jwt = false
 
 [functions.confirm-waitlist]
+verify_jwt = false
+
+[functions.customer-portal]
 verify_jwt = false
