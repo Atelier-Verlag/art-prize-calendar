@@ -241,6 +241,7 @@ export type Database = {
       }
       tenders: {
         Row: {
+          age_limit: string | null
           application_link: string | null
           artist_fee: boolean | null
           category: string | null
@@ -257,6 +258,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          age_limit?: string | null
           application_link?: string | null
           artist_fee?: boolean | null
           category?: string | null
@@ -273,6 +275,7 @@ export type Database = {
           title: string
         }
         Update: {
+          age_limit?: string | null
           application_link?: string | null
           artist_fee?: boolean | null
           category?: string | null
