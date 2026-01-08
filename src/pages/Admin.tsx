@@ -738,6 +738,32 @@ export default function Admin() {
 
         <main className="container py-16 md:py-24">
           <div className="max-w-4xl mx-auto">
+            {/* Environment Diagnostics Panel */}
+            <div className="bg-muted/50 border border-border rounded-xl p-4 mb-6 font-mono text-xs">
+              <p className="font-bold text-foreground mb-2">🔧 Backend Diagnostics</p>
+              <div className="space-y-1 text-muted-foreground">
+                <p>
+                  <span className="text-foreground font-semibold">VITE_SUPABASE_URL:</span>{' '}
+                  {import.meta.env.VITE_SUPABASE_URL || <span className="text-destructive">(undefined)</span>}
+                </p>
+                <p>
+                  <span className="text-foreground font-semibold">Key variable used:</span>{' '}
+                  {import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+                    ? 'VITE_SUPABASE_PUBLISHABLE_KEY'
+                    : import.meta.env.VITE_SUPABASE_ANON_KEY
+                    ? 'VITE_SUPABASE_ANON_KEY'
+                    : <span className="text-destructive">(none detected)</span>}
+                </p>
+                <p>
+                  <span className="text-foreground font-semibold">Key length:</span>{' '}
+                  {(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.length ||
+                    import.meta.env.VITE_SUPABASE_ANON_KEY?.length ||
+                    0)}{' '}
+                  chars
+                </p>
+              </div>
+            </div>
+
             {/* Admin Mode Banner - Prominent */}
             <div className="bg-destructive/10 border-2 border-destructive/30 rounded-xl p-4 mb-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -749,9 +775,6 @@ export default function Admin() {
                     <p className="font-display font-bold text-destructive">ADMIN MODUS</p>
                     <p className="text-sm text-muted-foreground">
                       Sie bearbeiten die Website-Inhalte
-                    </p>
-                    <p className="text-xs text-muted-foreground font-mono mt-1">
-                      DB: {import.meta.env.VITE_SUPABASE_URL?.substring(0, 35)}...
                     </p>
                   </div>
                 </div>
