@@ -241,43 +241,52 @@ export type Database = {
       }
       tenders: {
         Row: {
-          budget: string | null
+          application_link: string | null
+          artist_fee: boolean | null
           category: string | null
-          country: string | null
           created_at: string
           deadline: string | null
           description: string | null
+          disciplines: string[] | null
+          entry_fee: number | null
+          geo_scope: string | null
           id: string
-          is_premium: boolean
-          source_url: string | null
+          location: string | null
+          organizer: string | null
+          prize_detail: string | null
           title: string
-          trust_status: string
         }
         Insert: {
-          budget?: string | null
+          application_link?: string | null
+          artist_fee?: boolean | null
           category?: string | null
-          country?: string | null
           created_at?: string
           deadline?: string | null
           description?: string | null
+          disciplines?: string[] | null
+          entry_fee?: number | null
+          geo_scope?: string | null
           id?: string
-          is_premium?: boolean
-          source_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          prize_detail?: string | null
           title: string
-          trust_status?: string
         }
         Update: {
-          budget?: string | null
+          application_link?: string | null
+          artist_fee?: boolean | null
           category?: string | null
-          country?: string | null
           created_at?: string
           deadline?: string | null
           description?: string | null
+          disciplines?: string[] | null
+          entry_fee?: number | null
+          geo_scope?: string | null
           id?: string
-          is_premium?: boolean
-          source_url?: string | null
+          location?: string | null
+          organizer?: string | null
+          prize_detail?: string | null
           title?: string
-          trust_status?: string
         }
         Relationships: []
       }
