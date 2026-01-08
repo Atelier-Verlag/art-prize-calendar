@@ -435,6 +435,63 @@ export default function Admin() {
     }, 2000);
   };
 
+  // DEBUG: Test connection with explicit session check and CORS mode
+  const handleDebugConnection = async () => {
+    // Step 1: Check for session
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      alert(`SESSION ERROR: ${sessionError.message}`);
+      return;
+    }
+    
+    if (!sessionData.session) {
+      alert('STOP: No active session token found. Please logout and login again.');
+      return;
+    }
+    
+    alert(`Token found! User: ${sessionData.session.user.email}. Starting fetch...`);
+    
+    // Step 2: Build the hardcoded URL
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
+    const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    
+    // Use projectId to build URL if envUrl is missing
+    const baseUrl = (envUrl && envUrl.trim()) 
+      ? envUrl.replace(/\/$/, '') 
+      : (projectId ? `https://${projectId}.supabase.co` : null);
+    
+    if (!baseUrl) {
+      alert(`URL BUILD FAILED: envUrl=${envUrl}, projectId=${projectId}`);
+      return;
+    }
+    
+    const functionUrl = `${baseUrl}/functions/v1/fetch-prizes`;
+    alert(`Pinging: ${functionUrl}`);
+    
+    // Step 3: Make the request with window.fetch and mode: 'cors'
+    try {
+      const response = await window.fetch(functionUrl, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+          'apikey': anonKey || '',
+        },
+        body: JSON.stringify({}),
+      });
+      
+      const text = await response.text();
+      alert(`SUCCESS! Status: ${response.status} ${response.statusText}\n\nBody (first 500 chars):\n${text.substring(0, 500)}`);
+    } catch (err) {
+      const error = err as Error;
+      alert(`FETCH FAILED!\n\nName: ${error.name}\nMessage: ${error.message}\n\nThis is a client-side connectivity issue.`);
+    }
+  };
+
   const handleScanSource = async (source: ScraperSource) => {
     setScanningSourceId(source.id);
     setScanningSourceName(source.name);
@@ -1008,6 +1065,14 @@ export default function Admin() {
                           🔄 Roboter starten
                         </>
                       )}
+                    </Button>
+                    <Button
+                      onClick={handleDebugConnection}
+                      variant="outline"
+                      size="sm"
+                      className="border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                    >
+                      🔧 Debug Connection
                     </Button>
                   </div>
                 </div>
