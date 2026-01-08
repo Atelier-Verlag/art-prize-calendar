@@ -16,6 +16,7 @@ export interface Tender {
   geo_scope: string | null;
   location: string | null;
   application_link: string | null;
+  age_limit: string | null;
 }
 
 export function useTenders() {

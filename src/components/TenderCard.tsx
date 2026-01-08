@@ -6,7 +6,7 @@ import type { Tender } from '@/hooks/useTenders';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Lock, Crown, ThumbsDown, Banknote } from 'lucide-react';
+import { MapPin, Lock, Crown, ThumbsDown, Banknote, Users } from 'lucide-react';
 import {
   HoverCard,
   HoverCardContent,
@@ -190,7 +190,7 @@ export function TenderCard({ tender, onClick, isProUser }: TenderCardProps) {
 
           {/* Disciplines Tags */}
           {tender.disciplines && tender.disciplines.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-4">
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {tender.disciplines.slice(0, 4).map((discipline, index) => (
                 <Badge key={index} variant="secondary" className="text-xs">
                   {discipline}
@@ -203,6 +203,18 @@ export function TenderCard({ tender, onClick, isProUser }: TenderCardProps) {
               )}
             </div>
           )}
+
+          {/* Age Limit */}
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+            <Users className="h-3.5 w-3.5" />
+            <span>
+              {language === 'de' ? 'Altersbegrenzung: ' : 'Age Limit: '}
+              {!tender.age_limit || tender.age_limit === '' || tender.age_limit.toLowerCase() === 'none' 
+                ? (language === 'de' ? 'Keine' : 'None')
+                : tender.age_limit
+              }
+            </span>
+          </div>
 
           {/* Prize Detail Highlight */}
           {tender.prize_detail && (
