@@ -452,22 +452,14 @@ export default function Admin() {
     
     alert(`Token found! User: ${sessionData.session.user.email}. Starting fetch...`);
     
-    // Step 2: Get URL DYNAMICALLY from the Supabase client instance
-    // Access internal property from the client
-    const clientAny = supabase as any;
-    const supabaseUrl = clientAny.supabaseUrl || clientAny.rest?.url?.replace('/rest/v1', '') || import.meta.env.VITE_SUPABASE_URL;
-    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    // Step 2: HARDCODED to cnl project where edge function is deployed
+    const CNL_PROJECT_URL = 'https://cnlbpibyedjrydmvunzm.supabase.co';
+    const CNL_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNubGJwaWJ5ZWRqcnlkbXZ1bnptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDU5NDIsImV4cCI6MjA4MjQyMTk0Mn0.vx6bWNyKcoMSrGwz26diInT_EAS65Q9cwVKOPx3SoyE';
     
-    if (!supabaseUrl) {
-      alert(`CRITICAL: Cannot determine Supabase URL from client!`);
-      return;
-    }
-    
-    const baseUrl = supabaseUrl.replace(/\/$/, '');
-    const functionUrl = `${baseUrl}/functions/v1/fetch-prizes`;
+    const functionUrl = `${CNL_PROJECT_URL}/functions/v1/fetch-prizes`;
     
     // Show the user exactly where we're going
-    alert(`Dynamic Target URL:\n${functionUrl}\n\nBase from client: ${supabaseUrl}`);
+    alert(`Cross-Project Bridge:\n${functionUrl}\n\nUsing CNL project anon key`);
     
     // Step 3: Make the request with window.fetch and mode: 'cors'
     try {
@@ -478,7 +470,7 @@ export default function Admin() {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'Authorization': `Bearer ${sessionData.session.access_token}`,
-          'apikey': anonKey || '',
+          'apikey': CNL_ANON_KEY,
         },
         body: JSON.stringify({}),
       });
