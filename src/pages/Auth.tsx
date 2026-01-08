@@ -26,6 +26,8 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [view, setView] = useState<AuthView>('login');
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [checkoutTimeout, setCheckoutTimeout] = useState(false);
 
   // Get checkout params from URL
   const priceId = searchParams.get('priceId');
@@ -37,16 +39,26 @@ export default function Auth() {
     const handlePostAuthCheckout = async () => {
       if (user && !loading && priceId && !isProcessingCheckout) {
         setIsProcessingCheckout(true);
+        setIsSubmitting(false); // Clear submitting state
         // User just logged in/signed up and has a pending checkout
         await startCheckout(priceId);
         navigate(returnTo);
       }
-      // NOTE: we intentionally do NOT auto-redirect logged-in users here,
-      // so the /auth page can show an explicit Logout button for session clearing.
     };
 
     handlePostAuthCheckout();
   }, [user, loading, priceId, returnTo, navigate, startCheckout, isProcessingCheckout]);
+
+  // Fallback timeout: if checkout is processing for > 3 seconds, show manual button
+  useEffect(() => {
+    if (signupComplete && isCheckoutFlow) {
+      const timeout = setTimeout(() => {
+        setCheckoutTimeout(true);
+        setIsSubmitting(false);
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [signupComplete, isCheckoutFlow]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,13 +115,14 @@ export default function Auth() {
       }
       setIsSubmitting(false);
     } else {
+      setSignupComplete(true); // Mark signup as complete for timeout fallback
       toast({
         title: language === 'de' ? 'Erfolgreich registriert!' : 'Successfully registered!',
         description: isCheckoutFlow 
           ? (language === 'de' ? 'Weiterleitung zur Zahlung...' : 'Redirecting to checkout...')
           : (language === 'de' ? 'Willkommen!' : 'Welcome!'),
       });
-      // Don't navigate here - useEffect will handle checkout redirect after user state updates
+      // Keep isSubmitting true - useEffect will clear it when checkout starts or timeout fires
     }
   };
 
@@ -441,16 +454,32 @@ export default function Auth() {
                     minLength={8}
                   />
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full gradient-gold text-primary font-semibold border-0"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  {t('auth.signup')}
-                </Button>
+                {checkoutTimeout && isCheckoutFlow ? (
+                  <Button
+                    type="button"
+                    className="w-full gradient-gold text-primary font-semibold border-0"
+                    onClick={async () => {
+                      setIsSubmitting(true);
+                      await startCheckout(priceId!);
+                      navigate(returnTo);
+                    }}
+                  >
+                    {language === 'de' ? 'Weiter zur Zahlung' : 'Proceed to Payment'}
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    className="w-full gradient-gold text-primary font-semibold border-0"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    {signupComplete 
+                      ? (language === 'de' ? 'Weiterleitung...' : 'Redirecting...')
+                      : t('auth.signup')}
+                  </Button>
+                )}
               </form>
               <p className="text-center text-sm text-muted-foreground mt-4">
                 {t('auth.hasAccount')}{' '}
