@@ -6,9 +6,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// PERFORMANCE CONSTANTS
+const HARD_TIMEOUT_MS = 25000; // 25 seconds hard limit
+const TAVILY_TIMEOUT_MS = 8000; // 8 seconds per Tavily request
+const AI_BATCH_TIMEOUT_MS = 12000; // 12 seconds per AI batch
+const MAX_CONTENT_CHARS = 4000; // Limit content to 4000 chars
+const BATCH_SIZE = 3; // Smaller batches for faster processing
+
+const startTime = Date.now();
+
 const logStep = (step: string, details?: unknown) => {
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[FETCH-PRIZES] ${step}${detailsStr}`);
+  console.log(`[FETCH-PRIZES][${elapsed}s] ${step}${detailsStr}`);
+};
+
+const isTimeoutApproaching = () => {
+  return (Date.now() - startTime) > HARD_TIMEOUT_MS;
 };
 
 // Erweiterte internationale Suchbegriffe für Open Calls 2026 (nur 2026!)
@@ -19,7 +33,6 @@ const SEARCH_QUERIES = [
   "Open Call Malerei & Bildhauerei 2026",
   "Ausschreibungen Bildende Kunst 2026 Deutschland Österreich",
   "Call for Artists 2026 Europe",
-  // Spezifische Kategorien für Skulptur, Performance und Medienkunst
   "International Performance Art Open Calls 2026",
   "Sculpture Competitions 2026 worldwide",
   "New Media Art Grants 2026",
@@ -45,41 +58,65 @@ interface ExtractedPrize {
   prize_amount: number | null;
   eligibility_restriction: string | null;
   isDraft?: boolean;
-  // New fields for tenders extraction
   age_limit: string | null;
   artist_fee: boolean | null;
   entry_fee: number | null;
 }
 
+// Timeout wrapper for fetch requests
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  }
+}
+
 async function searchWithTavily(query: string, apiKey: string): Promise<TavilyResult[]> {
   logStep(`Tavily-Suche: "${query}"`);
   
-  const response = await fetch("https://api.tavily.com/search", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      api_key: apiKey,
-      query: query,
-      search_depth: "advanced",
-      max_results: 10,
-      include_answer: false,
-      include_raw_content: false,
-    }),
-  });
+  try {
+    const response = await fetchWithTimeout("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: apiKey,
+        query: query,
+        search_depth: "basic", // Changed from "advanced" for speed
+        max_results: 5, // Reduced from 10
+        include_answer: false,
+        include_raw_content: false,
+      }),
+    }, TAVILY_TIMEOUT_MS);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Tavily API Fehler: ${response.status} - ${errorText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Tavily API Fehler: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const results = (data.results || []).map((r: TavilyResult) => ({
+      ...r,
+      // Truncate content to MAX_CONTENT_CHARS
+      content: r.content?.substring(0, MAX_CONTENT_CHARS) || '',
+    }));
+    
+    logStep(`Gefunden: ${results.length} Ergebnisse für "${query}"`);
+    return results;
+  } catch (error) {
+    logStep(`Tavily-Fehler für "${query}"`, { error: String(error) });
+    return []; // Return empty instead of throwing
   }
-
-  const data = await response.json();
-  return data.results || [];
 }
-
-// Process items in smaller batches to avoid timeout
-const BATCH_SIZE = 5;
 
 async function extractPrizesWithAI(
   searchResults: TavilyResult[],
@@ -89,21 +126,26 @@ async function extractPrizesWithAI(
 
   const allPrizes: ExtractedPrize[] = [];
   
-  // Process in batches of BATCH_SIZE to avoid timeout
   for (let i = 0; i < searchResults.length; i += BATCH_SIZE) {
+    // Check for approaching timeout
+    if (isTimeoutApproaching()) {
+      logStep("⚠️ Timeout approaching - returning partial results", { processed: i, total: searchResults.length });
+      break;
+    }
+    
     const batch = searchResults.slice(i, i + BATCH_SIZE);
     const batchNum = Math.floor(i / BATCH_SIZE) + 1;
     const totalBatches = Math.ceil(searchResults.length / BATCH_SIZE);
     
-    logStep(`Verarbeite Batch ${batchNum}/${totalBatches}`, { batchSize: batch.length });
+    logStep(`Batch ${batchNum}/${totalBatches}`, { size: batch.length });
     
     try {
       const batchPrizes = await extractPrizeBatch(batch, lovableApiKey);
       allPrizes.push(...batchPrizes);
-      logStep(`Batch ${batchNum} abgeschlossen`, { foundPrizes: batchPrizes.length });
+      logStep(`Batch ${batchNum} OK`, { found: batchPrizes.length });
     } catch (e) {
-      logStep(`Fehler in Batch ${batchNum}`, { error: String(e) });
-      // Continue with next batch instead of failing completely
+      logStep(`Batch ${batchNum} FEHLER`, { error: String(e) });
+      // Continue with next batch
     }
   }
 
@@ -115,168 +157,116 @@ async function extractPrizeBatch(
   searchResults: TavilyResult[],
   lovableApiKey: string
 ): Promise<ExtractedPrize[]> {
+  // Compact format to reduce token usage
   const resultsText = searchResults
-    .map((r, i) => `[${i + 1}] Titel: ${r.title}\nURL: ${r.url}\nInhalt: ${r.content}`)
-    .join("\n\n---\n\n");
+    .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content.substring(0, 2000)}`)
+    .join("\n---\n");
 
   const today = new Date().toISOString().split('T')[0];
   
-  const systemPrompt = `Du bist ein Experte für Kunstausschreibungen. Extrahiere aus den Suchergebnissen alle relevanten Kunstwettbewerbe, Kunstpreise, Stipendien und Open Calls.
+  // STREAMLINED PROMPT - focused on extraction only
+  const systemPrompt = `Du extrahierst Kunstausschreibungen. Heute: ${today}. NUR Deadlines nach ${today}!
 
-KRITISCHE DATUMS-REGELN:
-- Das heutige Datum ist: ${today}
-- IGNORIERE STRIKT alle Ergebnisse mit Deadline VOR dem heutigen Datum!
-- IGNORIERE alle Ausschreibungen von 2025, es sei denn die Deadline liegt nachweislich in der Zukunft
-- Nur Ausschreibungen mit Deadline in 2026 oder später extrahieren
-- Im Zweifel: NICHT extrahieren!
+EXTRAHIERE NUR:
+- name: Titel
+- deadline: YYYY-MM-DD (NUR Zukunft!)
+- website: URL
+- description: Max 150 Zeichen
+- organizer: Veranstalter
+- region, country: Ort
+- category: Kunstpreis|Wettbewerb|Stipendium|Förderung|Residenz|Ausstellung|Kunst am Bau
+- fee, prize_amount: Zahlen in EUR oder null
+- eligibility_restriction: Lokale Beschränkungen oder null
+- age_limit: "unter 35", "bis 40", "none", oder null
+- artist_fee: true wenn Honorar erwähnt, sonst false
+- entry_fee: Zahl in EUR, 0 wenn kostenlos, null wenn unklar
 
-FOKUS:
-- Bildende Kunst (Malerei, Skulptur, Installation, Fotografie, Performance, Medienkunst)
-- Keine Musik, Theater oder Literatur-Wettbewerbe
-
-KATEGORISIERUNGS-REGELN (STRIKT BEFOLGEN - basierend auf Titel UND Beschreibung):
-
-1. "Ausstellung" / "exhibition" = Wenn Titel/Beschreibung enthält: "Exposition", "Ausstellung", "Show", "Exhibition", "Gallery Show", "Gruppenausstellung", "Solo Show"
-
-2. "Stipendium" / "grant" = Wenn Titel/Beschreibung enthält: "Grant", "Stipendium", "Bourse", "Scholarship", "Fellowship", "Arbeitsstipendium", "Förderstipendium" 
-   WICHTIG: Dies ist NICHT das gleiche wie "Residenz"!
-
-3. "Kunstpreis" = Wenn Titel/Beschreibung enthält: "Prize", "Award", "Preis", "Kunstpreis", "Prix", "Auszeichnung", "Ehrung"
-
-4. "Residenz" / "residency" = Wenn Titel/Beschreibung enthält: "Residency", "Residenz", "Artist-in-Residence", "Aufenthalt", "Atelier"
-   NUR wenn es um einen physischen Aufenthalt geht!
-
-5. "Förderung" = Wenn Titel/Beschreibung enthält: "Förderung", "Funding", "Unterstützung", "Projektförderung"
-
-6. "Kunst am Bau" / "public_art" = Wenn Titel/Beschreibung enthält: "Public Art", "Kunst am Bau", "Kunst im öffentlichen Raum", "Sculpture Park"
-
-7. "Wettbewerb" = Standard-Fallback für Wettbewerbe mit Jurierung die nicht in andere Kategorien passen
-
-NEUE FELDER - AKTIV SUCHEN UND EXTRAHIEREN:
-
-8. ALTERSBEGRENZUNG (age_limit):
-   - Suche nach Phrasen wie: "bis 35 Jahre", "unter 40", "born after 1990", "up to 35 years", "max. 30 Jahre", "keine Altersbegrenzung", "no age limit", "open to all ages"
-   - Wenn gefunden -> extrahiere als Text (z.B. "unter 35", "bis 40 Jahre", "geboren nach 1985")
-   - Wenn explizit "keine Altersbegrenzung" oder "no age limit" -> setze auf "none"
-   - Wenn keine Information gefunden -> null
-
-9. KÜNSTLERHONORAR (artist_fee):
-   - AKTIV suchen nach: "honorarium", "Honorar", "exhibition fee", "Ausstellungshonorar", "artist payment", "Künstlerhonorar", "Aufwandsentschädigung", "compensation"
-   - Wenn solche Zahlungen AN den Künstler erwähnt werden -> true
-   - Wenn nicht gefunden oder unklar -> false
-
-10. TEILNAHMEGEBÜHR (entry_fee):
-    - Suche nach: "application fee", "Bewerbungsgebühr", "handling fee", "Bearbeitungsgebühr", "submission fee", "entry fee", "Teilnahmegebühr"
-    - Wenn monetärer Wert gefunden (z.B. "20€", "$30", "25 EUR") -> extrahiere als Zahl
-    - Wenn "free", "kostenlos", "no fee", "gebührenfrei" -> setze auf 0
-    - Wenn nicht gefunden -> null
-
-Für jeden gefundenen Eintrag extrahiere:
-- name: Titel der Ausschreibung
-- deadline: Datum im Format YYYY-MM-DD (MUSS in der Zukunft liegen!)
-- website: URL zur Ausschreibung
-- description: Kurze Beschreibung (max 200 Zeichen)
-- organizer: Veranstalter/Organisation
-- region: Region/Stadt (z.B. "Berlin", "Bayern", "Europa")
-- country: Land (z.B. "Deutschland", "Österreich", "International")
-- category: STRIKT basierend auf obigen Regeln - wähle die PASSENDSTE Kategorie!
-- fee: Teilnahmegebühr in Euro (null wenn kostenlos oder unbekannt) - DEPRECATED, use entry_fee
-- prize_amount: Preisgeld in Euro (null wenn unbekannt)
-- eligibility_restriction: Lokale Einschränkungen (z.B. "Nur für in Köln lebende Künstler") oder null wenn offen
-- age_limit: Altersbegrenzung als Text oder null
-- artist_fee: true wenn Künstlerhonorar gezahlt wird, sonst false
-- entry_fee: Teilnahmegebühr als Zahl in Euro (0 wenn kostenlos, null wenn unbekannt)`;
-
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${lovableApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `Analysiere diese Suchergebnisse und extrahiere alle Kunstausschreibungen für 2026:\n\n${resultsText}` }
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "extract_prizes",
-            description: "Extrahiere Kunstausschreibungen aus den Suchergebnissen",
-            parameters: {
-              type: "object",
-              properties: {
-                prizes: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      deadline: { type: "string", description: "Format: YYYY-MM-DD" },
-                      website: { type: "string" },
-                      description: { type: "string" },
-                      organizer: { type: "string" },
-                      region: { type: "string" },
-                      country: { type: "string" },
-                      category: { 
-                        type: "string", 
-                        enum: ["Kunstpreis", "Wettbewerb", "Stipendium", "Förderung", "Residenz", "Ausstellung", "Kunst am Bau", "grant", "painting", "photography", "sculpture", "performance", "media", "residency", "exhibition", "public_art", "mixed"],
-                        description: "Category based on content - Ausstellung for exhibitions, Stipendium for grants/scholarships, Kunstpreis for prizes/awards, Residenz for residencies, Wettbewerb for competitions"
-                      },
-                      fee: { type: "number", nullable: true },
-                      prize_amount: { type: "number", nullable: true },
-                      eligibility_restriction: { type: "string", nullable: true, description: "Lokale Einschränkungen wie 'Nur für Kölner Künstler' oder null" },
-                      age_limit: { type: "string", nullable: true, description: "Altersbegrenzung z.B. 'unter 35', 'bis 40 Jahre', 'none' wenn keine Begrenzung, null wenn unbekannt" },
-                      artist_fee: { type: "boolean", description: "true wenn Künstlerhonorar gezahlt wird, false wenn nicht" },
-                      entry_fee: { type: "number", nullable: true, description: "Teilnahmegebühr in Euro, 0 wenn kostenlos, null wenn unbekannt" },
-                    },
-                    required: ["name", "deadline", "website", "description", "organizer", "region", "country", "category"],
-                  },
-                },
-              },
-              required: ["prizes"],
-            },
-          },
-        },
-      ],
-      tool_choice: { type: "function", function: { name: "extract_prizes" } },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`AI Gateway Fehler: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  
-  // Parse tool call response
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall?.function?.arguments) {
-    return [];
-  }
+IGNORIERE: Musik, Theater, Literatur, abgelaufene Deadlines.
+Sei SCHNELL und PRÄZISE. Keine Erklärungen.`;
 
   try {
+    const response = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite", // Faster model
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Extrahiere Kunstausschreibungen 2026:\n\n${resultsText}` }
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_prizes",
+              description: "Kunstausschreibungen extrahieren",
+              parameters: {
+                type: "object",
+                properties: {
+                  prizes: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        deadline: { type: "string" },
+                        website: { type: "string" },
+                        description: { type: "string" },
+                        organizer: { type: "string" },
+                        region: { type: "string" },
+                        country: { type: "string" },
+                        category: { type: "string" },
+                        fee: { type: "number", nullable: true },
+                        prize_amount: { type: "number", nullable: true },
+                        eligibility_restriction: { type: "string", nullable: true },
+                        age_limit: { type: "string", nullable: true },
+                        artist_fee: { type: "boolean" },
+                        entry_fee: { type: "number", nullable: true },
+                      },
+                      required: ["name", "deadline", "website", "description", "organizer", "region", "country", "category"],
+                    },
+                  },
+                },
+                required: ["prizes"],
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "extract_prizes" } },
+      }),
+    }, AI_BATCH_TIMEOUT_MS);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`AI Gateway Fehler: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      return [];
+    }
+
     const parsed = JSON.parse(toolCall.function.arguments);
     return parsed.prizes || [];
   } catch (e) {
-    logStep("Fehler beim Parsen der AI-Antwort", { error: String(e) });
+    logStep("AI-Batch Fehler", { error: String(e) });
     return [];
   }
 }
 
-// Fallback: Einfache Extraktion wenn AI fehlschlägt
 function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
   return searchResults
     .filter(r => r.title && r.url)
-    .slice(0, 10) // Max 10 Drafts
+    .slice(0, 5) // Reduced from 10
     .map(r => ({
-      name: `[ENTWURF] ${r.title.substring(0, 100)}`,
-      deadline: "2025-12-31", // Platzhalter-Deadline
+      name: `[ENTWURF] ${r.title.substring(0, 80)}`,
+      deadline: "2026-12-31",
       website: r.url,
-      description: r.content?.substring(0, 200) || "Keine Beschreibung verfügbar. Bitte manuell prüfen.",
+      description: r.content?.substring(0, 150) || "Bitte manuell prüfen.",
       organizer: "Unbekannt",
       region: "International",
       country: "International",
@@ -305,7 +295,6 @@ serve(async (req) => {
   const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
-  // Parse request body for single URL mode
   let singleUrl: string | null = null;
   let sourceName: string | null = null;
   try {
@@ -317,22 +306,19 @@ serve(async (req) => {
   }
 
   const isSingleUrlMode = !!singleUrl;
-
-  // Log ID für spätere Updates
   let runningLogId: string | null = null;
 
   try {
     const modeLabel = isSingleUrlMode ? `Einzelscan: ${sourceName || singleUrl}` : "Internationale Suche";
-    logStep(`🤖 Kunst-Ausschreibungs-Roboter gestartet - ${modeLabel}`);
+    logStep(`🤖 Roboter gestartet - ${modeLabel}`);
 
-    // Log-Eintrag erstellen: Running
     const { data: logEntry } = await supabaseClient
       .from("scraper_logs")
       .insert({
         status: "running",
         message: isSingleUrlMode 
-          ? `Einzelscan gestartet: ${sourceName || singleUrl}` 
-          : "Kunst-Ausschreibungs-Roboter gestartet - Internationale Suche läuft...",
+          ? `Einzelscan: ${sourceName || singleUrl}` 
+          : "Roboter gestartet - Suche läuft...",
         items_found: 0,
       })
       .select("id")
@@ -340,181 +326,107 @@ serve(async (req) => {
     
     runningLogId = logEntry?.id || null;
 
-    // API Keys prüfen
-    if (!tavilyApiKey) {
-      throw new Error("TAVILY_API_KEY ist nicht konfiguriert");
-    }
-    if (!lovableApiKey) {
-      throw new Error("LOVABLE_API_KEY ist nicht konfiguriert");
-    }
+    if (!tavilyApiKey) throw new Error("TAVILY_API_KEY fehlt");
+    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
-    // 1. ARCHIVIERUNG: Abgelaufene Preise archivieren
-    logStep("Starte Archivierung abgelaufener Preise");
+    // 1. ARCHIVIERUNG
+    logStep("Archiviere abgelaufene Preise");
     const today = new Date().toISOString().split('T')[0];
     
-    const { data: expiredPrizes, error: fetchError } = await supabaseClient
+    const { data: expiredPrizes } = await supabaseClient
       .from("art_prizes")
       .select("id")
       .eq("is_archived", false)
       .lt("deadline", today);
 
-    if (fetchError) {
-      throw new Error(`Fehler beim Abrufen abgelaufener Preise: ${fetchError.message}`);
-    }
-
     let archivedCount = 0;
     if (expiredPrizes && expiredPrizes.length > 0) {
       const expiredIds = expiredPrizes.map(p => p.id);
-      
-      const { error: updateError } = await supabaseClient
+      await supabaseClient
         .from("art_prizes")
         .update({ is_archived: true })
         .in("id", expiredIds);
-
-      if (updateError) {
-        throw new Error(`Fehler beim Archivieren: ${updateError.message}`);
-      }
-      
       archivedCount = expiredPrizes.length;
-      logStep(`${archivedCount} Preise wurden archiviert`);
+      logStep(`${archivedCount} archiviert`);
     }
 
-    // 2. SUCHE: Mit Tavily nach neuen Ausschreibungen suchen
+    // 2. SUCHE - with timeout checks
     let allSearchResults: TavilyResult[] = [];
     
     if (isSingleUrlMode && singleUrl) {
-      // Single URL mode: search specifically for this URL/source
-      logStep(`Einzelscan für URL: ${singleUrl}`);
+      logStep(`Einzelscan: ${singleUrl}`);
       try {
-        // Search with the URL as query to find related content
-        const results = await searchWithTavily(`site:${new URL(singleUrl).hostname} Kunstpreis OR Wettbewerb OR Open Call 2026`, tavilyApiKey);
+        const hostname = new URL(singleUrl).hostname;
+        const results = await searchWithTavily(`site:${hostname} Kunstpreis OR Wettbewerb OR Open Call 2026`, tavilyApiKey);
         allSearchResults = results;
-        logStep(`Gefunden: ${results.length} Ergebnisse für ${sourceName || singleUrl}`);
       } catch (e) {
-        logStep(`Fehler bei Einzelscan`, { error: String(e) });
+        logStep(`Einzelscan Fehler`, { error: String(e) });
       }
     } else {
-      // Full scan mode: use all predefined search queries
+      // Process queries but check for timeout
       for (const query of SEARCH_QUERIES) {
-        try {
-          const results = await searchWithTavily(query, tavilyApiKey);
-          allSearchResults = allSearchResults.concat(results);
-          logStep(`Gefunden: ${results.length} Ergebnisse für "${query}"`);
-        } catch (e) {
-          logStep(`Fehler bei Suche "${query}"`, { error: String(e) });
+        if (isTimeoutApproaching()) {
+          logStep("⚠️ Timeout - stoppe Suche", { completed: allSearchResults.length });
+          break;
         }
+        const results = await searchWithTavily(query, tavilyApiKey);
+        allSearchResults = allSearchResults.concat(results);
       }
     }
 
-    // Duplikate entfernen (nach URL)
+    // Deduplicate
     const uniqueResults = allSearchResults.filter(
-      (result, index, self) => 
-        index === self.findIndex(r => r.url === result.url)
+      (result, index, self) => index === self.findIndex(r => r.url === result.url)
     );
     
-    logStep(`Gesamtergebnisse nach Deduplizierung: ${uniqueResults.length}`);
+    logStep(`${uniqueResults.length} eindeutige Ergebnisse`);
 
-    // 3. AI-EXTRAKTION: Daten aus Suchergebnissen extrahieren
+    // 3. AI EXTRACTION
     let extractedPrizes: ExtractedPrize[] = [];
     let newPrizesCount = 0;
     let draftCount = 0;
 
-    if (uniqueResults.length > 0) {
+    if (uniqueResults.length > 0 && !isTimeoutApproaching()) {
       try {
         extractedPrizes = await extractPrizesWithAI(uniqueResults, lovableApiKey);
       } catch (aiError) {
-        logStep("AI-Extraktion fehlgeschlagen, erstelle Entwürfe", { error: String(aiError) });
+        logStep("AI-Fehler, erstelle Entwürfe", { error: String(aiError) });
       }
 
-      // FALLBACK: Wenn AI nichts findet, speichere Rohdaten als Entwürfe
       if (extractedPrizes.length === 0 && uniqueResults.length > 0) {
-        logStep("Fallback: Erstelle Entwürfe aus Suchergebnissen");
         extractedPrizes = createDraftPrizes(uniqueResults);
         draftCount = extractedPrizes.length;
       }
 
-      // Filtere abgelaufene Preise VOR dem Speichern
-      const todayDate = new Date().toISOString().split('T')[0];
-      const validPrizes = extractedPrizes.filter(prize => {
-        if (prize.deadline < todayDate) {
-          logStep(`Gefiltert (abgelaufen): ${prize.name} - Deadline: ${prize.deadline}`);
-          return false;
-        }
-        return true;
-      });
-      
-      logStep(`Nach Datums-Filter: ${validPrizes.length} von ${extractedPrizes.length} Preisen behalten`);
+      // Filter expired
+      const validPrizes = extractedPrizes.filter(prize => prize.deadline >= today);
+      logStep(`${validPrizes.length} gültige Preise`);
 
-      // 4. SPEICHERN: UPSERT - Neue Preise einfügen oder bestehende aktualisieren (basierend auf Website-URL)
+      // 4. SAVE - with timeout checks
       for (const prize of validPrizes) {
-        // Validiere category gegen erlaubte Werte (inkl. neue Kategorien)
+        if (isTimeoutApproaching()) {
+          logStep("⚠️ Timeout - stoppe Speicherung", { saved: newPrizesCount });
+          break;
+        }
+
         const validCategories = ["painting", "sculpture", "media", "photography", "performance", "mixed", "residency", "grant", "exhibition", "public_art", "Kunstpreis", "Wettbewerb", "Stipendium", "Förderung", "Residenz", "Ausstellung", "Kunst am Bau"];
         
-        // Map English categories to German for consistency
         let safeCategory = prize.category;
         if (safeCategory === "grant") safeCategory = "Stipendium";
         if (safeCategory === "exhibition") safeCategory = "Ausstellung";
         if (safeCategory === "residency") safeCategory = "Residenz";
         if (safeCategory === "public_art") safeCategory = "Kunst am Bau";
-        
-        if (!validCategories.includes(safeCategory)) {
-          safeCategory = "Wettbewerb"; // fallback
-        }
+        if (!validCategories.includes(safeCategory)) safeCategory = "Wettbewerb";
 
-        // DUPLICATE CHECK: Check if similar entry already exists (by name similarity within similar timeframe)
-        const { data: potentialDuplicates } = await supabaseClient
-          .from("art_prizes")
-          .select("id, name, deadline")
-          .ilike("name", `%${prize.name.split(' ').slice(0, 3).join('%')}%`)
-          .eq("is_archived", false);
-
-        let isDuplicate = false;
-        let existingId: string | null = null;
-
-        if (potentialDuplicates && potentialDuplicates.length > 0) {
-          for (const existing of potentialDuplicates) {
-            // Check if names are very similar (same base name)
-            const existingNameLower = existing.name.toLowerCase();
-            const newNameLower = prize.name.toLowerCase();
-            
-            // If names are similar and deadlines are within 60 days of each other
-            const existingDeadline = new Date(existing.deadline);
-            const newDeadline = new Date(prize.deadline);
-            const daysDiff = Math.abs((existingDeadline.getTime() - newDeadline.getTime()) / (1000 * 60 * 60 * 24));
-            
-            if ((existingNameLower.includes(newNameLower.substring(0, 20)) || 
-                 newNameLower.includes(existingNameLower.substring(0, 20))) && 
-                daysDiff < 60) {
-              isDuplicate = true;
-              // Keep the one with the later deadline
-              if (newDeadline > existingDeadline) {
-                existingId = existing.id;
-                logStep(`Duplicate gefunden: "${existing.name}" - wird aktualisiert mit späterem Datum`);
-              } else {
-                logStep(`Duplicate übersprungen: "${prize.name}" (bestehender Eintrag hat späteres Datum)`);
-              }
-              break;
-            }
-          }
-        }
-
-        // Skip if duplicate with earlier deadline
-        if (isDuplicate && !existingId) {
-          continue;
-        }
-
-        // Prüfen ob bereits vorhanden (nach Website-URL)
+        // Check for existing entry
         const { data: existingByUrl } = await supabaseClient
           .from("art_prizes")
           .select("id")
           .eq("website", prize.website)
           .maybeSingle();
 
-        const targetId = existingId || existingByUrl?.id;
-
-        if (targetId) {
-          // UPDATE: Bestehenden Eintrag aktualisieren
-          const { error: updateError } = await supabaseClient
+        if (existingByUrl) {
+          await supabaseClient
             .from("art_prizes")
             .update({
               name: prize.name,
@@ -530,15 +442,8 @@ serve(async (req) => {
               is_archived: false,
               updated_at: new Date().toISOString(),
             })
-            .eq("id", targetId);
-
-          if (updateError) {
-            logStep(`Fehler beim Aktualisieren von "${prize.name}"`, { error: updateError.message });
-          } else {
-            logStep(`Aktualisiert: ${prize.name}`);
-          }
+            .eq("id", existingByUrl.id);
         } else {
-          // INSERT: Neuen Eintrag erstellen
           const { error: insertError } = await supabaseClient
             .from("art_prizes")
             .insert({
@@ -557,16 +462,10 @@ serve(async (req) => {
               is_short_term: false,
             });
 
-          if (insertError) {
-            logStep(`Fehler beim Speichern von "${prize.name}"`, { error: insertError.message });
-          } else {
-            newPrizesCount++;
-            logStep(`Neu gespeichert: ${prize.name}${prize.isDraft ? ' (Entwurf)' : ''}`);
-          }
+          if (!insertError) newPrizesCount++;
         }
 
-        // ALSO SAVE TO TENDERS TABLE with the new fields
-        // Check if already exists in tenders by application_link
+        // Save to tenders table
         const { data: existingTender } = await supabaseClient
           .from("tenders")
           .select("id")
@@ -574,8 +473,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (existingTender) {
-          // Update existing tender with new fields
-          const { error: tenderUpdateError } = await supabaseClient
+          await supabaseClient
             .from("tenders")
             .update({
               title: prize.name,
@@ -591,15 +489,8 @@ serve(async (req) => {
               geo_scope: prize.country,
             })
             .eq("id", existingTender.id);
-
-          if (tenderUpdateError) {
-            logStep(`Fehler beim Aktualisieren von Tender "${prize.name}"`, { error: tenderUpdateError.message });
-          } else {
-            logStep(`Tender aktualisiert: ${prize.name}`);
-          }
         } else {
-          // Insert new tender
-          const { error: tenderInsertError } = await supabaseClient
+          await supabaseClient
             .from("tenders")
             .insert({
               title: prize.name,
@@ -615,48 +506,35 @@ serve(async (req) => {
               prize_detail: prize.prize_amount ? `${prize.prize_amount} EUR` : null,
               geo_scope: prize.country,
             });
-
-          if (tenderInsertError) {
-            logStep(`Fehler beim Speichern von Tender "${prize.name}"`, { error: tenderInsertError.message });
-          } else {
-            logStep(`Tender gespeichert: ${prize.name}`);
-          }
         }
       }
     }
 
-    // Erfolgs-Log: Running-Eintrag updaten ODER neuen erstellen
-    const successMessage = `Roboter abgeschlossen: ${SEARCH_QUERIES.length} Suchbegriffe, ${uniqueResults.length} Webseiten, ${extractedPrizes.length} Ausschreibungen gefunden, ${newPrizesCount} neu gespeichert${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}, ${archivedCount} archiviert.`;
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const wasTimeout = isTimeoutApproaching();
+    const statusEmoji = wasTimeout ? "⚠️" : "✅";
+    const successMessage = `${statusEmoji} Roboter beendet (${elapsed}s): ${uniqueResults.length} Seiten, ${extractedPrizes.length} gefunden, ${newPrizesCount} neu${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}, ${archivedCount} archiviert${wasTimeout ? ' [TIMEOUT - Teilergebnis]' : ''}`;
 
     if (runningLogId) {
-      // Update running -> success
       await supabaseClient
         .from("scraper_logs")
         .update({
-          status: "success",
+          status: wasTimeout ? "partial" : "success",
           message: successMessage,
           items_found: newPrizesCount,
         })
         .eq("id", runningLogId);
-    } else {
-      // Fallback: Neuen Eintrag erstellen
-      await supabaseClient
-        .from("scraper_logs")
-        .insert({
-          status: "success",
-          message: successMessage,
-          items_found: newPrizesCount,
-        });
     }
 
-    logStep("🎉 Kunst-Ausschreibungs-Roboter erfolgreich beendet");
+    logStep(successMessage);
 
     return new Response(
       JSON.stringify({
         success: true,
+        partial: wasTimeout,
         message: successMessage,
+        elapsed: `${elapsed}s`,
         stats: {
-          queries: SEARCH_QUERIES.length,
           searched: uniqueResults.length,
           extracted: extractedPrizes.length,
           drafts: draftCount,
@@ -664,41 +542,27 @@ serve(async (req) => {
           archived: archivedCount,
         },
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
+    logStep(`❌ FEHLER nach ${elapsed}s`, { message: errorMessage });
 
-    // Fehler-Log: Running-Eintrag updaten ODER neuen erstellen
     if (runningLogId) {
       await supabaseClient
         .from("scraper_logs")
         .update({
           status: "error",
-          message: `Fehler: ${errorMessage}`,
+          message: `Fehler nach ${elapsed}s: ${errorMessage}`,
           items_found: 0,
         })
         .eq("id", runningLogId);
-    } else {
-      await supabaseClient
-        .from("scraper_logs")
-        .insert({
-          status: "error",
-          message: `Fehler: ${errorMessage}`,
-          items_found: 0,
-        });
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
+      JSON.stringify({ success: false, error: errorMessage, elapsed: `${elapsed}s` }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });
