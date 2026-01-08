@@ -55,6 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let initialLoadDone = false;
+
     // Set up auth state listener FIRST
     const {
       data: { subscription },
@@ -63,16 +65,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Keep loading=true until permissions are loaded
-        setLoading(true);
+        // Only show loading on initial load, NOT on subsequent auth events
+        // This prevents "kicking out" users when tabs refresh session
+        if (!initialLoadDone) {
+          setLoading(true);
+        }
+        // Use setTimeout to avoid race conditions with Supabase
         setTimeout(async () => {
           await loadProfile(session.user.id);
-          setLoading(false);
+          if (!initialLoadDone) {
+            setLoading(false);
+            initialLoadDone = true;
+          }
         }, 0);
       } else {
         setIsProUser(false);
         setIsAdmin(false);
         setLoading(false);
+        initialLoadDone = true;
       }
     });
 
@@ -82,12 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        setLoading(true);
         await loadProfile(session.user.id);
-        setLoading(false);
-      } else {
-        setLoading(false);
       }
+      setLoading(false);
+      initialLoadDone = true;
     });
 
     return () => subscription.unsubscribe();
