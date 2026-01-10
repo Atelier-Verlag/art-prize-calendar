@@ -483,8 +483,25 @@ serve(async (req) => {
         logStep(`${draftCount} Entwürfe erstellt als Fallback`);
       }
 
-      // Filter expired
-      const validPrizes = extractedPrizes.filter(prize => prize.deadline >= today);
+      // Helper function to validate date format (YYYY-MM-DD)
+      const isValidDate = (dateStr: string): boolean => {
+        if (!dateStr || typeof dateStr !== 'string') return false;
+        // Must match YYYY-MM-DD format
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(dateStr)) return false;
+        // Must be a valid date when parsed
+        const parsed = new Date(dateStr);
+        return !isNaN(parsed.getTime());
+      };
+
+      // Filter: valid date format AND not expired
+      const validPrizes = extractedPrizes.filter(prize => {
+        if (!isValidDate(prize.deadline)) {
+          logStep(`Ungültiges Datumsformat übersprungen`, { name: prize.name, deadline: prize.deadline });
+          return false;
+        }
+        return prize.deadline >= today;
+      });
       logStep(`${validPrizes.length} gültige Preise nach Deadline-Filter`);
 
       // 5. SAVE TO ART_PRIZES TABLE - BATCH INSERT (no timeout check - saving is critical!)
