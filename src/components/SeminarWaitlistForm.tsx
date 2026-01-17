@@ -76,15 +76,15 @@ export function SeminarWaitlistForm({ onSuccess }: SeminarWaitlistFormProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-foreground font-semibold">
+      <div className="flex items-center gap-2 text-foreground font-bold text-base">
         <GraduationCap className="h-5 w-5 text-primary" />
         <span>Schluss mit unnötigen Kosten!</span>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Lerne, wie du seriöse Ausschreibungen sofort erkennst. Damit du dir die Gebühren sparst und dich voll darauf konzentrierst, Preise, Wettbewerbe und Stipendien wirklich zu gewinnen.
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        Lerne, wie du seriöse Ausschreibungen sofort erkennst, damit du dir Gebühren sparst und dich auf das Gewinnen konzentrierst.
       </p>
       <p className="text-sm text-muted-foreground">
-        Setz dich unverbindlich auf die Warteliste für unsere kommenden Seminare.
+        Setz dich auf die Warteliste für unsere Seminare:
       </p>
       <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="flex gap-2">
         <Input
