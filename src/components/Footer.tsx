@@ -44,18 +44,21 @@ export function Footer() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-4">
-          <a
-            href="https://stripe.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Powered by Stripe.
-          </a>
+          <div className="flex flex-col items-center gap-2 md:items-end">
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Kunstpreiskalender.
             </p>
+            <p className="text-xs text-muted-foreground">
+              Ein Service der Atelier Verlag Ursula Fritzsche KG
+            </p>
+            <a
+              href="https://stripe.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Powered by Stripe.
+            </a>
           </div>
         </div>
       </div>

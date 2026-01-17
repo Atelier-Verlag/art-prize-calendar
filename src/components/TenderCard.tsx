@@ -99,18 +99,18 @@ export function TenderCard({ tender, onClick, isProUser }: TenderCardProps) {
             </div>
           </HoverCardTrigger>
           <HoverCardContent 
-            className="w-96 p-5 z-50" 
+            className="w-[420px] p-5 z-[100]" 
             side="top" 
             align="center"
-            sideOffset={8}
+            sideOffset={12}
           >
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-destructive font-semibold text-base">
-                <ThumbsDown className="h-5 w-5" />
-                <span>{t('blacksheep.title')}</span>
+              <div className="flex items-center gap-2 text-destructive font-bold text-lg">
+                <ThumbsDown className="h-6 w-6" />
+                <span>Achtung: Teilnahmegebühren!</span>
               </div>
-              <p className="text-base leading-relaxed">
-                {t('blacksheep.description1')}{' '}
+              <p className="text-sm leading-relaxed text-foreground">
+                Weitere Informationen zur Grauzone erfahren Sie regelmäßig aktuell in der Zeitschrift{' '}
                 <a 
                   href="https://www.atelier-verlag.de" 
                   target="_blank" 
@@ -118,12 +118,12 @@ export function TenderCard({ tender, onClick, isProUser }: TenderCardProps) {
                   className="text-primary underline hover:text-primary/80 font-semibold"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  atelier (www.atelier-verlag.de)
+                  'ateliery' (www.atelier-verlag.de)
                 </a>{' '}
-                {t('blacksheep.description2')}
+                in der Rubrik 'Grauzone'.
               </p>
-              <p className="text-base leading-relaxed">
-                {t('blacksheep.archiveInfo')}{' '}
+              <p className="text-sm leading-relaxed text-foreground">
+                Eine Liste behandelter Fälle finden Sie unter:{' '}
                 <a 
                   href="https://www.atelier-verlag.de/grauzone-archiv" 
                   target="_blank" 
@@ -131,7 +131,7 @@ export function TenderCard({ tender, onClick, isProUser }: TenderCardProps) {
                   className="text-primary underline hover:text-primary/80 font-semibold"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {t('blacksheep.archiveLink')}
+                  Grauzone Archiv
                 </a>
               </p>
               
@@ -188,25 +188,25 @@ export function TenderCard({ tender, onClick, isProUser }: TenderCardProps) {
             </p>
           )}
 
-          {/* Disciplines Tags */}
+          {/* Disciplines Tags - Font size increased by 2pt */}
           {tender.disciplines && tender.disciplines.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3">
               {tender.disciplines.slice(0, 4).map((discipline, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
+                <Badge key={index} variant="secondary" className="text-sm">
                   {discipline}
                 </Badge>
               ))}
               {tender.disciplines.length > 4 && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-sm">
                   +{tender.disciplines.length - 4}
                 </Badge>
               )}
             </div>
           )}
 
-          {/* Age Limit */}
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
-            <Users className="h-3.5 w-3.5" />
+          {/* Age Limit - Font size increased by 2pt */}
+          <div className="flex items-center gap-1.5 text-base text-muted-foreground mb-4">
+            <Users className="h-4 w-4" />
             <span>
               {language === 'de' ? 'Altersbegrenzung: ' : 'Age Limit: '}
               {!tender.age_limit || tender.age_limit === '' || tender.age_limit.toLowerCase() === 'none' 
@@ -216,11 +216,11 @@ export function TenderCard({ tender, onClick, isProUser }: TenderCardProps) {
             </span>
           </div>
 
-          {/* Prize Detail Highlight */}
+          {/* Prize Detail Highlight - Font size increased by 2pt */}
           {tender.prize_detail && (
             <div className="bg-accent/10 rounded-lg p-3 mb-4">
-              <span className="text-sm font-semibold text-foreground">{t('card.prizeLabel')}:</span>
-              <div className="font-display text-base font-bold text-foreground line-clamp-2">
+              <span className="text-base font-semibold text-foreground">{t('card.prizeLabel')}:</span>
+              <div className="font-display text-lg font-bold text-foreground line-clamp-2">
                 {tender.prize_detail}
               </div>
             </div>
