@@ -7,15 +7,18 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// PERFORMANCE CONSTANTS - Optimized for completeness
-const SEARCH_TIMEOUT_MS = 45000; // 45s for search phase only
-const TAVILY_TIMEOUT_MS = 8000; // 8 seconds per Tavily request (faster)
-const AI_BATCH_TIMEOUT_MS = 15000; // 15 seconds per AI batch (faster)
-const MAX_CONTENT_CHARS = 3000; // Limit content to reduce processing time
-const BATCH_SIZE = 5; // Process 5 at a time for speed
-const MAX_RETRIES = 1; // Single retry to save time
+// EXTERNAL API CONFIG - Target für Transfer
+const EXTERNAL_API_URL = "https://wszvfvisjmaiafvogrft.supabase.co/functions/v1/ingest-external-tender";
+const EXTERNAL_API_KEY = "Transfer-2026";
 
-// Request-scoped timing (will be set per request)
+// PERFORMANCE CONSTANTS
+const SEARCH_TIMEOUT_MS = 45000;
+const TAVILY_TIMEOUT_MS = 8000;
+const AI_BATCH_TIMEOUT_MS = 15000;
+const MAX_CONTENT_CHARS = 3000;
+const BATCH_SIZE = 5;
+const MAX_RETRIES = 1;
+
 let requestStartTime = Date.now();
 
 const logStep = (step: string, details?: unknown) => {
@@ -66,7 +69,15 @@ interface ExtractedPrize {
   entry_fee: number | null;
 }
 
-// Timeout wrapper for fetch requests with retry
+// External API payload format
+interface ExternalTenderPayload {
+  title: string;
+  website_link: string;
+  description: string;
+  deadline: string;
+  category: string;
+}
+
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number, retries = MAX_RETRIES): Promise<Response> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     const controller = new AbortController();
@@ -82,7 +93,7 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
       
       if (attempt < retries) {
         logStep(`Retry ${attempt}/${retries}`, { url: url.substring(0, 50), isTimeout });
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
       
@@ -95,6 +106,40 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
   throw new Error('Max retries exceeded');
 }
 
+// NEW: Send prize to external API
+async function sendToExternalAPI(prize: ExtractedPrize): Promise<boolean> {
+  try {
+    const payload: ExternalTenderPayload = {
+      title: prize.name,
+      website_link: prize.website,
+      description: prize.description,
+      deadline: prize.deadline,
+      category: prize.category || "Wettbewerb",
+    };
+
+    const response = await fetch(EXTERNAL_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": EXTERNAL_API_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logStep(`External API Fehler`, { status: response.status, error: errorText, title: prize.name });
+      return false;
+    }
+
+    logStep(`✅ Gesendet an externes System`, { title: prize.name });
+    return true;
+  } catch (error) {
+    logStep(`❌ Transfer Fehler`, { error: String(error), title: prize.name });
+    return false;
+  }
+}
+
 async function searchWithTavily(query: string, apiKey: string): Promise<TavilyResult[]> {
   logStep(`Tavily-Suche: "${query}"`);
   
@@ -105,8 +150,8 @@ async function searchWithTavily(query: string, apiKey: string): Promise<TavilyRe
       body: JSON.stringify({
         api_key: apiKey,
         query: query,
-        search_depth: "advanced", // Use advanced for better results
-        max_results: 10, // Get more results
+        search_depth: "advanced",
+        max_results: 10,
         include_answer: false,
         include_raw_content: false,
       }),
@@ -201,7 +246,7 @@ Sei SCHNELL und PRÄZISE. Keine Erklärungen.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash", // Better model for accuracy
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Extrahiere Kunstausschreibungen 2026:\n\n${resultsText}` }
@@ -279,7 +324,7 @@ function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
       organizer: "Unbekannt",
       region: "International",
       country: "International",
-      category: "mixed" as const,
+      category: "Wettbewerb",
       fee: null,
       prize_amount: null,
       eligibility_restriction: null,
@@ -290,21 +335,11 @@ function createDraftPrizes(searchResults: TavilyResult[]): ExtractedPrize[] {
     }));
 }
 
-// Normalize title for comparison
-function normalizeTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/\[entwurf\]/gi, '')
-    .replace(/[^a-z0-9äöüß]/gi, '')
-    .trim();
-}
-
 serve(async (req) => {
   console.log(`[ROBOT] Invoked`, { method: req.method, url: req.url });
 
   requestStartTime = Date.now();
   
-  // Handle CORS preflight - must return 204 with all CORS headers
   if (req.method === "OPTIONS") {
     return new Response(null, { 
       status: 204,
@@ -312,25 +347,14 @@ serve(async (req) => {
     });
   }
 
-  // Wrap EVERYTHING in try/catch so errors always include CORS headers
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    // Log environment (redacted) so we can confirm we're hitting the correct production backend.
-    try {
-      const u = new URL(supabaseUrl);
-      logStep("Backend env", {
-        host: u.host,
-        hasServiceRoleKey: !!serviceRoleKey,
-        serviceRoleKeyPrefix: serviceRoleKey ? serviceRoleKey.slice(0, 8) : null,
-      });
-    } catch {
-      logStep("Backend env (invalid SUPABASE_URL)", {
-        supabaseUrlPresent: !!supabaseUrl,
-        hasServiceRoleKey: !!serviceRoleKey,
-      });
-    }
+    logStep("Backend env", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceRoleKey: !!serviceRoleKey,
+    });
 
     if (!supabaseUrl || !serviceRoleKey) {
       throw new Error("Missing backend env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)");
@@ -358,16 +382,14 @@ serve(async (req) => {
     const isSingleUrlMode = !!singleUrl;
     let runningLogId: string | null = null;
 
-    const modeLabel = isSingleUrlMode ? `Einzelscan: ${sourceName || singleUrl}` : "Vollständige internationale Suche";
+    const modeLabel = isSingleUrlMode ? `Einzelscan: ${sourceName || singleUrl}` : "Transfer-Modus: Senden an externes System";
     logStep(`🤖 Roboter gestartet - ${modeLabel}`);
 
     const { data: logEntry } = await supabaseClient
       .from("scraper_logs")
       .insert({
         status: "running",
-        message: isSingleUrlMode 
-          ? `Einzelscan: ${sourceName || singleUrl}` 
-          : "Roboter gestartet - Vollständige Suche läuft...",
+        message: `🔄 TRANSFER MODE: ${modeLabel}`,
         items_found: 0,
       })
       .select("id")
@@ -382,44 +404,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY fehlt - bitte in Secrets konfigurieren");
     }
 
-    // 1. ARCHIVIERUNG - Archive expired art_prizes
-    logStep("Archiviere abgelaufene Einträge");
-    const today = new Date().toISOString().split('T')[0];
-    
-    const { data: expiredPrizes, error: expiredError } = await supabaseClient
-      .from("art_prizes")
-      .update({ is_archived: true })
-      .lt("deadline", today)
-      .eq("is_archived", false)
-      .select("id");
-
-    let archivedCount = 0;
-    if (expiredPrizes && expiredPrizes.length > 0) {
-      archivedCount = expiredPrizes.length;
-      logStep(`${archivedCount} abgelaufene Einträge archiviert`);
-    }
-
-    // 2. FETCH EXISTING ART_PRIZES for duplicate detection
-    const { data: existingPrizes } = await supabaseClient
-      .from("art_prizes")
-      .select("id, name, website, deadline");
-    
-    const existingByUrl = new Map<string, string>();
-    const existingByTitleDeadline = new Map<string, string>();
-    
-    if (existingPrizes) {
-      for (const p of existingPrizes) {
-        if (p.website) {
-          existingByUrl.set(p.website, p.id);
-        }
-        const key = `${normalizeTitle(p.name)}_${p.deadline}`;
-        existingByTitleDeadline.set(key, p.id);
-      }
-    }
-    
-    logStep(`Existierende Einträge geladen`, { count: existingPrizes?.length || 0 });
-
-    // 3. SUCHE - Process ALL search queries
+    // 1. SUCHE - Process ALL search queries
     let allSearchResults: TavilyResult[] = [];
     let queriesCompleted = 0;
     
@@ -434,10 +419,9 @@ serve(async (req) => {
         logStep(`Einzelscan Fehler`, { error: String(e) });
       }
     } else {
-      // Process ALL search queries for completeness
       for (let i = 0; i < SEARCH_QUERIES.length; i++) {
         if (isSearchPhaseTimeout()) {
-          logStep("⚠️ Search phase timeout - proceeding to save", { completed: queriesCompleted, total: SEARCH_QUERIES.length });
+          logStep("⚠️ Search phase timeout - proceeding to transfer", { completed: queriesCompleted, total: SEARCH_QUERIES.length });
           break;
         }
         
@@ -448,7 +432,6 @@ serve(async (req) => {
         allSearchResults = allSearchResults.concat(results);
         queriesCompleted++;
         
-        // Small delay between queries to avoid rate limits
         if (i < SEARCH_QUERIES.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
@@ -462,11 +445,10 @@ serve(async (req) => {
     
     logStep(`${uniqueResults.length} eindeutige Ergebnisse aus ${queriesCompleted} Suchen`);
 
-    // 4. AI EXTRACTION
+    // 2. AI EXTRACTION
     let extractedPrizes: ExtractedPrize[] = [];
-    let newPrizesCount = 0;
-    let updatedCount = 0;
-    let skippedCount = 0;
+    let transferredCount = 0;
+    let failedCount = 0;
     let draftCount = 0;
 
     if (uniqueResults.length > 0) {
@@ -486,13 +468,13 @@ serve(async (req) => {
       // Helper function to validate date format (YYYY-MM-DD)
       const isValidDate = (dateStr: string): boolean => {
         if (!dateStr || typeof dateStr !== 'string') return false;
-        // Must match YYYY-MM-DD format
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(dateStr)) return false;
-        // Must be a valid date when parsed
         const parsed = new Date(dateStr);
         return !isNaN(parsed.getTime());
       };
+
+      const today = new Date().toISOString().split('T')[0];
 
       // Filter: valid date format AND not expired
       const validPrizes = extractedPrizes.filter(prize => {
@@ -502,37 +484,14 @@ serve(async (req) => {
         }
         return prize.deadline >= today;
       });
+      
       logStep(`${validPrizes.length} gültige Preise nach Deadline-Filter`);
 
-      // 5. SAVE TO ART_PRIZES TABLE - BATCH INSERT (no timeout check - saving is critical!)
-      logStep(`Starte Speicherung in art_prizes`, { count: validPrizes.length });
-
-      // Prepare all art_prize records matching the art_prizes table schema
-      type ArtPrizeData = {
-        name: string;
-        deadline: string;
-        website: string;
-        description: string;
-        organizer: string;
-        region: string;
-        country: string;
-        category: string;
-        fee: number | null;
-        prize_amount: number | null;
-        eligibility_restriction: string | null;
-        age_min: number | null;
-        age_max: number | null;
-        currency: string;
-        requirements: string[];
-        is_archived: boolean;
-        is_short_term: boolean;
-      };
-
-      const newPrizes: ArtPrizeData[] = [];
-      const updateOperations: { id: string; data: Partial<ArtPrizeData> }[] = [];
+      // 3. TRANSFER TO EXTERNAL API (NO LOCAL SAVE!)
+      logStep(`🚀 Starte Transfer an externes System`, { count: validPrizes.length, targetUrl: EXTERNAL_API_URL });
 
       for (const prize of validPrizes) {
-        // Map category to valid art_category enum
+        // Map category to German
         let safeCategory = prize.category;
         const categoryMap: Record<string, string> = {
           "grant": "Stipendium",
@@ -554,138 +513,25 @@ serve(async (req) => {
           safeCategory = "Wettbewerb";
         }
 
-        // Parse age_limit into age_min/age_max
-        let ageMin: number | null = null;
-        let ageMax: number | null = null;
-        if (prize.age_limit) {
-          const ageMatch = prize.age_limit.match(/(\d+)/g);
-          if (ageMatch) {
-            if (prize.age_limit.toLowerCase().includes('unter') || prize.age_limit.toLowerCase().includes('bis')) {
-              ageMax = parseInt(ageMatch[0]);
-            } else if (prize.age_limit.toLowerCase().includes('über') || prize.age_limit.toLowerCase().includes('ab')) {
-              ageMin = parseInt(ageMatch[0]);
-            } else if (ageMatch.length >= 2) {
-              ageMin = parseInt(ageMatch[0]);
-              ageMax = parseInt(ageMatch[1]);
-            }
-          }
-        }
+        // Update prize with safe category
+        const prizeWithSafeCategory = { ...prize, category: safeCategory };
 
-        // Check for existing by URL first
-        let existingId = existingByUrl.get(prize.website);
-        
-        // If not found by URL, check by normalized title + deadline
-        if (!existingId) {
-          const titleDeadlineKey = `${normalizeTitle(prize.name)}_${prize.deadline}`;
-          existingId = existingByTitleDeadline.get(titleDeadlineKey);
-        }
-
-        const artPrizeData: ArtPrizeData = {
-          name: prize.name,
-          deadline: prize.deadline,
-          website: prize.website,
-          description: prize.description,
-          organizer: prize.organizer,
-          region: prize.region || "International",
-          country: prize.country || "International",
-          category: safeCategory,
-          fee: prize.entry_fee ?? null,
-          prize_amount: prize.prize_amount ?? null,
-          eligibility_restriction: prize.eligibility_restriction,
-          age_min: ageMin,
-          age_max: ageMax,
-          currency: "EUR",
-          requirements: [],
-          is_archived: false,
-          is_short_term: false,
-        };
-
-        if (existingId && existingId !== 'new') {
-          // Update existing - don't overwrite is_archived or is_short_term
-          const { is_archived, is_short_term, ...updateData } = artPrizeData;
-          updateOperations.push({ id: existingId, data: updateData });
-        } else if (!existingId) {
-          // Add to maps to prevent duplicates within same batch
-          existingByUrl.set(prize.website, 'new');
-          existingByTitleDeadline.set(`${normalizeTitle(prize.name)}_${prize.deadline}`, 'new');
-          newPrizes.push(artPrizeData);
+        const success = await sendToExternalAPI(prizeWithSafeCategory);
+        if (success) {
+          transferredCount++;
         } else {
-          skippedCount++;
+          failedCount++;
         }
+
+        // Small delay between transfers to avoid overwhelming the external API
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      logStep(`Prepared`, { new: newPrizes.length, updates: updateOperations.length, skipped: skippedCount });
-
-      const writeErrors: Array<{ stage: string; error: unknown }> = [];
-
-      // BATCH INSERT new art_prizes (much faster than one-by-one)
-      if (newPrizes.length > 0) {
-        const { data: insertedData, error: batchInsertError } = await supabaseClient
-          .from("art_prizes")
-          .insert(newPrizes)
-          .select("id");
-
-        if (batchInsertError) {
-          // CRITICAL: log full error object (not just message)
-          logStep("Batch Insert Fehler (full)", { error: batchInsertError });
-          writeErrors.push({ stage: 'insert_batch', error: batchInsertError });
-
-          // Fallback: try individual inserts
-          for (const prizeData of newPrizes) {
-            const { error: singleError } = await supabaseClient.from("art_prizes").insert(prizeData);
-            if (!singleError) {
-              newPrizesCount++;
-            } else if (singleError.message.includes('duplicate') || singleError.code === '23505') {
-              skippedCount++;
-            } else {
-              logStep("Single Insert Fehler (full)", { error: singleError, name: prizeData.name });
-              writeErrors.push({ stage: 'insert_single', error: singleError });
-            }
-          }
-        } else {
-          newPrizesCount = insertedData?.length || newPrizes.length;
-          logStep(`Batch Insert OK`, { inserted: newPrizesCount });
-        }
-      }
-
-      // Process updates (these need to be individual)
-      for (const op of updateOperations) {
-        const { error: updateError } = await supabaseClient
-          .from("art_prizes")
-          .update(op.data)
-          .eq("id", op.id);
-
-        if (!updateError) {
-          updatedCount++;
-        } else {
-          // CRITICAL: log full error object (not just message)
-          logStep("Update Fehler (full)", { error: updateError, id: op.id });
-          writeErrors.push({ stage: 'update', error: updateError });
-        }
-      }
-
-      // Sanity-check: confirm the table is actually readable from this backend connection
-      const { count: rowCount, error: countError } = await supabaseClient
-        .from('art_prizes')
-        .select('id', { count: 'exact', head: true });
-
-      if (countError) {
-        logStep('Sanity count Fehler (full)', { error: countError });
-        writeErrors.push({ stage: 'sanity_count', error: countError });
-      } else {
-        logStep('Sanity count OK', { rows: rowCount });
-      }
-
-      if (writeErrors.length > 0) {
-        // Make the function fail loudly so the frontend never shows a false success.
-        throw new Error(`DB_WRITE_FAILED: ${JSON.stringify(writeErrors).substring(0, 2000)}`);
-      }
-
-      logStep(`Speicherung abgeschlossen`, { new: newPrizesCount, updated: updatedCount, skipped: skippedCount });
+      logStep(`Transfer abgeschlossen`, { transferred: transferredCount, failed: failedCount });
     }
 
     const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
-    const successMessage = `✅ Roboter beendet (${elapsed}s): ${queriesCompleted}/${SEARCH_QUERIES.length} Suchen, ${uniqueResults.length} Seiten, ${extractedPrizes.length} gefunden, ${newPrizesCount} NEU, ${updatedCount} aktualisiert, ${skippedCount} übersprungen, ${archivedCount} archiviert${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}`;
+    const successMessage = `📤 TRANSFER COMPLETE (${elapsed}s): ${queriesCompleted}/${SEARCH_QUERIES.length} Suchen, ${uniqueResults.length} Seiten, ${extractedPrizes.length} gefunden, ${transferredCount} ÜBERTRAGEN, ${failedCount} fehlgeschlagen${draftCount > 0 ? ` (${draftCount} Entwürfe)` : ''}`;
 
     if (runningLogId) {
       await supabaseClient
@@ -693,7 +539,7 @@ serve(async (req) => {
         .update({
           status: "success",
           message: successMessage,
-          items_found: newPrizesCount,
+          items_found: transferredCount,
         })
         .eq("id", runningLogId);
     }
@@ -711,10 +557,8 @@ serve(async (req) => {
           searched: uniqueResults.length,
           extracted: extractedPrizes.length,
           drafts: draftCount,
-          new: newPrizesCount,
-          updated: updatedCount,
-          skipped: skippedCount,
-          archived: archivedCount,
+          transferred: transferredCount,
+          failed: failedCount,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -728,9 +572,6 @@ serve(async (req) => {
       message: errorMessage, 
       stack: errorStack?.substring(0, 500) 
     });
-
-    // Note: supabaseClient and runningLogId may not be defined if error happened early
-    // so we skip the DB log update in catch block
 
     return new Response(
       JSON.stringify({ 
