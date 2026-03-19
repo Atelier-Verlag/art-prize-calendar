@@ -1,0 +1,1 @@
+ALTER TABLE public.seminar_waitlist ENABLE ROW LEVEL SECURITY;
