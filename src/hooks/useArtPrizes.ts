@@ -159,12 +159,26 @@ export function useArtPrizes(archived: boolean = false) {
   return useQuery({
     queryKey: ['art-prizes', archived],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const in120 = new Date(Date.now() + 120 * 86400000).toISOString().split('T')[0];
+
+      if (archived) {
+        const { data, error } = await supabase
+          .from('art_prizes')
+          .select('*')
+          .or(`is_archived.eq.true,deadline.lt.${today}`)
+          .order('deadline', { ascending: false });
+        if (error) throw error;
+        return (data || []).map(mapDbPrizeToArtPrize);
+      }
+
       const { data, error } = await supabase
         .from('art_prizes')
         .select('*')
-        .eq('is_archived', archived)
+        .eq('is_archived', false)
+        .gte('deadline', today)
+        .lte('deadline', in120)
         .order('deadline', { ascending: true });
-
       if (error) throw error;
       return (data || []).map(mapDbPrizeToArtPrize);
     },

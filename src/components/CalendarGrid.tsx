@@ -6,7 +6,6 @@ import { CalendarCard } from './CalendarCard';
 import { PrizeDetailModal } from './PrizeDetailModal';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
-import { addMonths, isBefore } from 'date-fns';
 import { type Category, getCategoryFilterColor } from '@/data/mockArtPrizes';
 
 // Static navigation filters in exact order
@@ -29,15 +28,8 @@ export function CalendarGrid() {
 
   const { data: prizes, isLoading } = useArtPrizes(false);
 
-  // Filter: only show deadlines within next 6 months
-  const sixMonthsFromNow = addMonths(new Date(), 6);
-  
+  // DB already filters to next 120 days; just apply category filter
   const filteredPrizes = (prizes || []).filter((prize) => {
-    // Filter by deadline within 6 months
-    const deadlineDate = new Date(prize.deadline);
-    if (!isBefore(deadlineDate, sixMonthsFromNow)) return false;
-    
-    // Filter by category
     if (selectedCategory === 'all') return true;
     return prize.category === selectedCategory;
   });
